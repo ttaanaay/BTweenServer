@@ -18,7 +18,7 @@ class QuoteRepository {
         speaker = this[Quotes.speaker],
         author = this[Quotes.author],
         category = this[Quotes.category],
-        tags = this[Quotes.tags].split(",").map { it.trim() }.filter { it.isNotEmpty() },
+        tags = this[Quotes.tags].split(",").map { it.trim() }.filter { it.length > 0 },
         visibility = this[Quotes.visibility],
         likeCount = this[Quotes.likeCount],
         createdAt = this[Quotes.createdAt],
@@ -138,7 +138,7 @@ class QuoteRepository {
     }
 
     fun likedQuoteIds(userId: Long, quoteIds: List<Long>): Set<Long> = transaction {
-        if (quoteIds.isEmpty()) return@transaction emptySet()
+        if (quoteIds.size == 0) return@transaction emptySet()
         Likes.selectAll()
             .where { (Likes.userId eq userId) and (Likes.quoteId inList quoteIds) }
             .map { it[Likes.quoteId] }

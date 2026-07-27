@@ -28,9 +28,9 @@ private val ALLOWED_SOURCE_TYPES = setOf(
 private val ALLOWED_VISIBILITY = setOf("PUBLIC", "PRIVATE")
 
 private fun validateQuoteRequest(request: QuoteRequest) {
-    if (request.text.isBlank()) throw ValidationException("Quote text can't be empty")
-    if (request.sourceTitle.isBlank()) throw ValidationException("Source title can't be empty")
-    if (request.speaker.isBlank()) throw ValidationException("Speaker / character can't be empty")
+    if (request.text.trim().length == 0) throw ValidationException("Quote text can't be empty")
+    if (request.sourceTitle.trim().length == 0) throw ValidationException("Source title can't be empty")
+    if (request.speaker.trim().length == 0) throw ValidationException("Speaker / character can't be empty")
     if (request.sourceType.uppercase() !in ALLOWED_SOURCE_TYPES) {
         throw ValidationException("Invalid source type: ${request.sourceType}")
     }
@@ -68,7 +68,7 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
                 }
 
                 val owner = userRepository.findById(quote.ownerId)!!.toResponse(userRepository, viewerId)
-                val isLiked = viewerId?.let { quoteRepository.likedQuoteIds(it, listOf(quote.id)).isNotEmpty() } ?: false
+                val isLiked = viewerId?.let { quoteRepository.likedQuoteIds(it, listOf(quote.id)).size > 0 } ?: false
                 call.respond(quote.toResponse(owner, isLiked))
             }
         }
@@ -85,8 +85,8 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
                     sourceTitle = request.sourceTitle.trim(),
                     sourceType = request.sourceType.uppercase(),
                     speaker = request.speaker.trim(),
-                    author = request.author?.trim()?.takeIf { it.isNotEmpty() },
-                    category = request.category?.trim()?.takeIf { it.isNotEmpty() },
+                    author = request.author?.trim()?.takeIf { it.length > 0 },
+                    category = request.category?.trim()?.takeIf { it.length > 0 },
                     tags = request.tags,
                     visibility = request.visibility.uppercase()
                 )
@@ -107,14 +107,14 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
                     sourceTitle = request.sourceTitle.trim(),
                     sourceType = request.sourceType.uppercase(),
                     speaker = request.speaker.trim(),
-                    author = request.author?.trim()?.takeIf { it.isNotEmpty() },
-                    category = request.category?.trim()?.takeIf { it.isNotEmpty() },
+                    author = request.author?.trim()?.takeIf { it.length > 0 },
+                    category = request.category?.trim()?.takeIf { it.length > 0 },
                     tags = request.tags,
                     visibility = request.visibility.uppercase()
                 ) ?: throw NotFoundException("Quote not found, or you don't own it")
 
                 val owner = userRepository.findById(userId)!!.toResponse(userRepository, userId)
-                val isLiked = quoteRepository.likedQuoteIds(userId, listOf(id)).isNotEmpty()
+                val isLiked = quoteRepository.likedQuoteIds(userId, listOf(id)).size > 0
                 call.respond(updated.toResponse(owner, isLiked))
             }
 

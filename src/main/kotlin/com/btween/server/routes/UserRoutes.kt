@@ -68,7 +68,7 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
                 val request = call.receive<UpdateProfileRequest>()
                 val updated = userRepository.updateProfile(
                     id = userId,
-                    displayName = request.displayName?.trim()?.takeIf { it.isNotEmpty() },
+                    displayName = request.displayName?.trim()?.takeIf { it.length > 0 },
                     avatarUrl = request.avatarUrl,
                     bio = request.bio
                 ) ?: throw NotFoundException("User not found")

@@ -36,7 +36,7 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
             if (request.password.length < 8) {
                 throw ValidationException("Password must be at least 8 characters")
             }
-            if (request.displayName.isBlank()) {
+            if (request.displayName.trim().length == 0) {
                 throw ValidationException("Display name can't be empty")
             }
             if (userRepository.usernameTaken(request.username)) {
