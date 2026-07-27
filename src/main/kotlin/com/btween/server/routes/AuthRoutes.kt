@@ -12,6 +12,7 @@ import com.btween.server.exception.ValidationException
 import com.btween.server.security.JwtService
 import com.btween.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
