@@ -1,0 +1,116 @@
+<resources>
+    <string name="app_name">BTween</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Common actions -->
+    <string name="action_search">Search</string>
+    <string name="action_save">Save</string>
+    <string name="action_back">Back</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_see_all">See all</string>
+    <string name="action_add_quote">Add Quote</string>
+    <string name="action_sort">Sort</string>
+    <string name="cd_add_to_favorites">Add to favorites</string>
+    <string name="cd_remove_from_favorites">Remove from favorites</string>
+
+    <!-- Home -->
+    <string name="home_empty_title">Your collection is empty</string>
+    <string name="home_empty_message">Start saving the lines that stuck with you \u2014 from movies, books, speeches, and more.</string>
+    <string name="home_empty_action">Add your first quote</string>
+    <string name="home_section_recently_added">Recently Added</string>
+    <string name="home_section_favorites">Favorites</string>
+    <string name="home_section_recently_viewed">Recently Viewed</string>
+    <string name="home_stat_quotes">Quotes</string>
+    <string name="home_stat_favorites">Favorites</string>
+    <string name="home_stat_sources">Sources</string>
+
+    <!-- Library -->
+    <string name="library_title">Library</string>
+    <string name="library_search_placeholder">Search your library\u2026</string>
+    <string name="library_chip_favorites">Favorites</string>
+    <string name="library_empty_title">No quotes found</string>
+    <string name="library_empty_message">Try adjusting your search or filters.</string>
+
+    <!-- Favorites -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_empty_title">No favorites yet</string>
+    <string name="favorites_empty_message">Tap the heart on any quote to save it here for quick access.</string>
+
+    <!-- Search -->
+    <string name="search_placeholder">Search quotes, sources, tags\u2026</string>
+    <string name="search_empty_title">Search your collection</string>
+    <string name="search_empty_message">Find quotes by text, source, character, author, category, or tag.</string>
+    <string name="search_no_results_title">No matches</string>
+    <string name="search_no_results_message">Try a different keyword.</string>
+
+    <!-- Add / Edit Quote -->
+    <string name="add_edit_title_add">Add Quote</string>
+    <string name="add_edit_title_edit">Edit Quote</string>
+    <string name="add_edit_label_text">Quote text</string>
+    <string name="add_edit_label_source_title">Source title</string>
+    <string name="add_edit_label_source_type">Source type</string>
+    <string name="add_edit_label_speaker">Speaker / Character</string>
+    <string name="add_edit_label_author">Author (optional)</string>
+    <string name="add_edit_label_category">Category</string>
+    <string name="add_edit_label_tags">Tags (comma separated)</string>
+    <string name="add_edit_label_note">Personal note (optional)</string>
+    <string name="add_edit_category_none">None</string>
+    <string name="add_edit_favorite_marked">Marked as favorite</string>
+    <string name="add_edit_favorite_unmarked">Mark as favorite</string>
+
+    <!-- Detail -->
+    <string name="detail_title">Quote</string>
+    <string name="detail_copied">Copied to clipboard</string>
+    <string name="detail_delete_dialog_title">Delete this quote?</string>
+    <string name="detail_delete_dialog_message">This can\'t be undone.</string>
+    <string name="detail_action_favorite">Favorite</string>
+    <string name="detail_action_copy">Copy</string>
+    <string name="detail_action_share_text">Share text</string>
+    <string name="detail_action_share_image">Share image</string>
+    <string name="detail_not_found">Quote not found</string>
+    <string name="detail_your_note">Your note</string>
+    <string name="detail_tags_prefix">Tags: %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_dynamic_color_title">Dynamic color</string>
+    <string name="settings_dynamic_color_subtitle">Match your wallpaper\'s colors</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_thai">\u0E44\u0E17\u0E22 (Thai)</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_dialog_title">Log out?</string>
+    <string name="settings_logout_dialog_message">You\'ll need to log in again to access your account.</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_tagline">A personal space to collect the words worth remembering.</string>
+
+    <!-- Source types -->
+    <string name="source_type_movie">Movie</string>
+    <string name="source_type_tv_series">TV Series</string>
+    <string name="source_type_book">Book</string>
+    <string name="source_type_anime">Anime</string>
+    <string name="source_type_game">Game</string>
+    <string name="source_type_podcast">Podcast</string>
+    <string name="source_type_speech">Speech</string>
+    <string name="source_type_other">Other</string>
+
+    <!-- Sort orders -->
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="sort_alphabetical">Alphabetical</string>
+    <string name="sort_favorite">Favorite first</string>
+</resources>

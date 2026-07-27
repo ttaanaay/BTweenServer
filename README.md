@@ -1,77 +1,83 @@
-# BTween Server
+# BTween
 
-Kotlin + Ktor backend for the BTween app: JWT auth, public/private quotes, likes, follows.
+A personal quote-collecting Android app, built natively in Kotlin with Jetpack Compose.
 
-## Tech stack
+## Tech Stack
 
-- Kotlin + Ktor (Netty engine)
-- Exposed (SQL DSL) + HikariCP connection pool
-- PostgreSQL (tested against Supabase's free Postgres)
-- JWT auth (access + refresh tokens), BCrypt password hashing
+| Concern | Choice |
+|---|---|
+| Language | Kotlin |
+| UI | Jetpack Compose + Material 3 |
+| Architecture | MVVM + Clean layering (data / domain / ui) |
+| DI | Hilt |
+| Local storage | Room (quotes, categories) + DataStore Preferences (settings) |
+| Navigation | Navigation-Compose, single-Activity |
+| Async | Kotlin Coroutines + Flow |
+| Image loading | Coil |
+| Image export ("share as image") | Compose `graphicsLayer`/`ImageBitmap` capture → FileProvider |
+| Min SDK | 24 (Android 7.0) |
+| Target/Compile SDK | 35 |
 
-## Environment variables
-
-| Variable | Required | Example | Notes |
-|---|---|---|---|
-| `DATABASE_URL` | yes | `postgresql://postgres:pw@db.xxxx.supabase.co:5432/postgres` | Paste Supabase's connection string directly |
-| `JWT_SECRET` | yes | a long random string | Generate with `openssl rand -hex 32` - never reuse or commit this |
-| `PORT` | no | `8080` | Render sets this automatically |
-| `JWT_ISSUER` | no | `btween-server` | |
-| `JWT_ACCESS_EXPIRY_MINUTES` | no | `60` | |
-| `JWT_REFRESH_EXPIRY_DAYS` | no | `30` | |
-| `CORS_ALLOWED_HOST` | no | unset = allow any origin | Only matters if you add a web client later |
-
-## Run locally
+## Module layout
 
 ```
-export DATABASE_URL="postgresql://postgres:yourpassword@db.xxxx.supabase.co:5432/postgres"
-export JWT_SECRET="$(openssl rand -hex 32)"
-./gradlew run
+app/src/main/java/com/btween/app/
+├── data/
+│   ├── local/
+│   │   ├── entity/       Room @Entity classes
+│   │   ├── dao/          Room @Dao interfaces
+│   │   ├── database/      AppDatabase, seed data
+│   │   └── converter/      Room TypeConverters (tags list, dates)
+│   ├── preferences/       DataStore-backed settings source
+│   ├── backup/            JSON export/import (backup & restore)
+│   └── repository/        Repository implementations
+├── domain/
+│   ├── model/             Plain domain models used by UI/ViewModels
+│   ├── repository/        Repository interfaces (contracts)
+│   └── usecase/           Single-purpose use cases
+├── di/                     Hilt modules
+├── ui/
+│   ├── theme/              Color, Type, Shape, Theme
+│   ├── navigation/         NavHost + destinations
+│   ├── components/         Shared composables (QuoteCard, EmptyState, etc.)
+│   ├── home/
+│   ├── library/
+│   ├── addedit/
+│   ├── detail/
+│   ├── search/
+│   ├── favorites/
+│   ├── categories/
+│   └── settings/
+└── util/                   Small shared helpers (share, image export, formatting)
 ```
 
-Server starts on `http://localhost:8080`. Tables are created automatically on first boot.
+## Build
 
-## Deploy to Render (free tier, no credit card)
+```
+./gradlew assembleDebug
+```
 
-1. Push this folder to a GitHub repo.
-2. On Render: **New +** -> **Web Service** -> connect the repo.
-3. Environment: **Docker** (Render will detect the `Dockerfile` automatically).
-4. Add the environment variables above (`DATABASE_URL` and `JWT_SECRET` at minimum) under **Environment**.
-5. Instance type: **Free**.
-6. Deploy. Render gives you a URL like `https://btween-server.onrender.com`.
+Requires JDK 17 and Android SDK 35. No API keys or secrets are required — the app is
+100% offline/local-storage.
 
-Note: on the free tier the service sleeps after 15 minutes of no traffic and takes
-30-50 seconds to wake back up on the next request - the Android app should show a
-loading state that accounts for this on first launch.
+## Development phases
 
-## API overview
+This project is being generated in reviewable phases:
 
-All request/response bodies are JSON.
+1. **Project foundation** *(this phase)* — Gradle setup, manifest, theming, launcher icon.
+2. Data layer — Room entities/DAOs/database, DataStore preferences, repositories.
+3. Domain layer — models, repository interfaces, use cases, Hilt modules.
+4. Navigation shell — bottom navigation, NavHost, MainActivity wiring.
+5. Home screen.
+6. Quote Library (list/grid, sort, filter).
+7. Add/Edit Quote screen.
+8. Quote Detail (copy/share text/share image/edit/delete).
+9. Search.
+10. Categories management.
+11. Favorites.
+12. Settings (theme, backup/restore, about).
+13. Final polish, README updates, verification pass.
 
-### Auth
-- `POST /auth/register` - `{ username, email, password, displayName }` -> `{ accessToken, refreshToken, user }`
-- `POST /auth/login` - `{ email, password }` -> same as above
-- `POST /auth/refresh` - `{ refreshToken }` -> same as above
+## License
 
-### Users
-- `GET /users/{id}` - public profile (auth optional, adds `isFollowedByMe` if logged in)
-- `PUT /users/me` - update own profile (auth required)
-- `POST /users/{id}/follow` / `DELETE /users/{id}/follow` (auth required)
-- `GET /users/{id}/quotes?limit=&offset=` - a user's quotes (private ones only visible to the owner)
-
-### Quotes
-- `GET /quotes/feed?limit=&offset=` - public feed, newest first (auth optional)
-- `GET /quotes/{id}` (auth optional)
-- `POST /quotes` - create (auth required)
-- `PUT /quotes/{id}` - update, owner only (auth required)
-- `DELETE /quotes/{id}` - owner only (auth required)
-- `POST /quotes/{id}/like` / `DELETE /quotes/{id}/like` (auth required)
-
-Send the access token as `Authorization: Bearer <accessToken>` on any authenticated route.
-
-## Not yet built
-
-- Rate limiting / abuse protection
-- Image upload for avatars (currently just accepts an `avatarUrl` string - pair with
-  something like Supabase Storage or Cloudinary's free tier later)
-- Pagination cursor (currently offset-based, fine at this scale)
+Personal project — all rights reserved by the app owner.
