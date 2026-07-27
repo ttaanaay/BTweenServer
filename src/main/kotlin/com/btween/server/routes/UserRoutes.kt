@@ -24,8 +24,8 @@ import io.ktor.server.routing.route
 
 fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
     route("/users") {
-
         authenticate(AUTH_JWT, optional = true) {
+
             get("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull()
                     ?: throw ValidationException("Invalid user id")
@@ -62,9 +62,7 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
                     )
                 })
             }
-        }
 
-        authenticate(AUTH_JWT, optional = false) {
             put("/me") {
                 val userId = call.requireUserId()
                 val request = call.receive<UpdateProfileRequest>()
