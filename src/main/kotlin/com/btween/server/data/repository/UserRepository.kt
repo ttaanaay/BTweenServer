@@ -74,7 +74,7 @@ class UserRepository {
     }
 
     fun unfollow(followerId: Long, followingId: Long) = transaction {
-        Follows.deleteWhere { (Follows.followerId eq followerId) and (Follows.followingId eq followingId) }
+        Follows.deleteWhere { with(SqlExpressionBuilder) { (Follows.followerId eq followerId) and (Follows.followingId eq followingId) } }
     }
 
     fun isFollowing(followerId: Long, followingId: Long): Boolean = transaction {

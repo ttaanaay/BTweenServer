@@ -80,7 +80,7 @@ class QuoteRepository {
     }
 
     fun delete(id: Long, ownerId: Long): Boolean = transaction {
-        Quotes.deleteWhere { (Quotes.id eq id) and (Quotes.ownerId eq ownerId) } > 0
+        Quotes.deleteWhere { with(SqlExpressionBuilder) { (Quotes.id eq id) and (Quotes.ownerId eq ownerId) } } > 0
     }
 
     fun findById(id: Long): Quote? = transaction {
@@ -126,7 +126,7 @@ class QuoteRepository {
     }
 
     fun unlike(userId: Long, quoteId: Long): Boolean = transaction {
-        val deleted = Likes.deleteWhere { (Likes.userId eq userId) and (Likes.quoteId eq quoteId) }
+        val deleted = Likes.deleteWhere { with(SqlExpressionBuilder) { (Likes.userId eq userId) and (Likes.quoteId eq quoteId) } }
         if (deleted > 0) {
             Quotes.update({ (Quotes.id eq quoteId) and (Quotes.likeCount greater 0) }) {
                 with(SqlExpressionBuilder) {
