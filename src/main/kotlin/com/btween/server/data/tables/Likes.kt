@@ -1,7 +1,6 @@
 package com.btween.server.data.tables
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 object Likes : Table("likes") {

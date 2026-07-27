@@ -13,10 +13,8 @@ import com.btween.server.routes.quoteRoutes
 import com.btween.server.routes.userRoutes
 import com.btween.server.security.JwtService
 import io.ktor.server.application.Application
-import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
@@ -35,7 +33,6 @@ fun Application.module(config: AppConfig) {
     val quoteRepository = QuoteRepository()
     val jwtService = JwtService(config)
 
-    install(CallLogging)
     configureSerialization()
     configureStatusPages()
     configureCors(config)

@@ -3,13 +3,8 @@ package com.btween.server.data.repository
 import com.btween.server.data.tables.Follows
 import com.btween.server.data.tables.Users
 import com.btween.server.domain.User
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import java.time.Instant
 
 class UserRepository {

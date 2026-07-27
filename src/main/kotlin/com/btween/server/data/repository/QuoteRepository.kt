@@ -3,18 +3,8 @@ package com.btween.server.data.repository
 import com.btween.server.data.tables.Likes
 import com.btween.server.data.tables.Quotes
 import com.btween.server.domain.Quote
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.greater
-import org.jetbrains.exposed.sql.inList
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.minus
-import org.jetbrains.exposed.sql.plus
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import java.time.Instant
 
 class QuoteRepository {
