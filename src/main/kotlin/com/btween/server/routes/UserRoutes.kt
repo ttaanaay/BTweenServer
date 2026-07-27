@@ -23,9 +23,13 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
 fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
+    userProfileGetRoutes(userRepository, quoteRepository)
+    userProfileMutationRoutes(userRepository)
+}
+
+private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
     route("/users") {
         authenticate(AUTH_JWT, optional = true) {
-
             get("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull()
                     ?: throw ValidationException("Invalid user id")
@@ -62,13 +66,20 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
                     )
                 })
             }
+        }
+    }
+}
 
+private fun Route.userProfileMutationRoutes(userRepository: UserRepository) {
+    route("/users") {
+        authenticate(AUTH_JWT, optional = true) {
             put("/me") {
                 val userId = call.requireUserId()
                 val request = call.receive<UpdateProfileRequest>()
+                val newDisplayName = request.displayName?.trim()
                 val updated = userRepository.updateProfile(
                     id = userId,
-                    displayName = request.displayName?.trim()?.takeIf { it.length > 0 },
+                    displayName = if (newDisplayName != null && newDisplayName.length > 0) newDisplayName else null,
                     avatarUrl = request.avatarUrl,
                     bio = request.bio
                 ) ?: throw NotFoundException("User not found")
