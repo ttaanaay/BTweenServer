@@ -115,7 +115,9 @@ class QuoteRepository {
                 it[Likes.createdAt] = Instant.now()
             }
             Quotes.update({ Quotes.id eq quoteId }) {
-                it[Quotes.likeCount] = Quotes.likeCount + 1
+                with(SqlExpressionBuilder) {
+                    it.update(Quotes.likeCount, Quotes.likeCount + 1)
+                }
             }
             true
         } else {
@@ -127,7 +129,9 @@ class QuoteRepository {
         val deleted = Likes.deleteWhere { (Likes.userId eq userId) and (Likes.quoteId eq quoteId) }
         if (deleted > 0) {
             Quotes.update({ (Quotes.id eq quoteId) and (Quotes.likeCount greater 0) }) {
-                it[Quotes.likeCount] = Quotes.likeCount - 1
+                with(SqlExpressionBuilder) {
+                    it.update(Quotes.likeCount, Quotes.likeCount - 1)
+                }
             }
         }
         deleted > 0
