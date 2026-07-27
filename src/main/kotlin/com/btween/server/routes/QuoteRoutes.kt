@@ -73,7 +73,7 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
             }
         }
 
-        authenticate(AUTH_JWT) {
+        authenticate(AUTH_JWT, optional = false) {
             post {
                 val userId = call.requireUserId()
                 val request = call.receive<QuoteRequest>()

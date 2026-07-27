@@ -64,7 +64,7 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
             }
         }
 
-        authenticate(AUTH_JWT) {
+        authenticate(AUTH_JWT, optional = false) {
             put("/me") {
                 val userId = call.requireUserId()
                 val request = call.receive<UpdateProfileRequest>()
