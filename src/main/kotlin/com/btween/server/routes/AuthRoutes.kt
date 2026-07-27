@@ -57,7 +57,7 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
             val refreshToken = jwtService.generateRefreshToken(user.id)
             call.respond(
                 HttpStatusCode.Created,
-                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, viewerId = user.id))
+                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
             )
         }
 
@@ -74,7 +74,7 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
             val refreshToken = jwtService.generateRefreshToken(user.id)
             call.respond(
                 HttpStatusCode.OK,
-                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, viewerId = user.id))
+                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
             )
         }
 
@@ -89,7 +89,7 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
             val refreshToken = jwtService.generateRefreshToken(user.id)
             call.respond(
                 HttpStatusCode.OK,
-                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, viewerId = user.id))
+                AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
             )
         }
     }

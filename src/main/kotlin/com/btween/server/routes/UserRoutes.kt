@@ -74,7 +74,7 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
                     avatarUrl = request.avatarUrl,
                     bio = request.bio
                 ) ?: throw NotFoundException("User not found")
-                call.respond(updated.toResponse(userRepository, viewerId = userId))
+                call.respond(updated.toResponse(userRepository, userId))
             }
 
             post("/{id}/follow") {
