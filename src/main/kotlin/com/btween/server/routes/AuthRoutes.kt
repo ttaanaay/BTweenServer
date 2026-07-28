@@ -9,9 +9,11 @@ import com.btween.server.dto.toResponse
 import com.btween.server.exception.ConflictException
 import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
+import com.btween.server.plugins.AUTH_RATE_LIMIT
 import com.btween.server.security.JwtService
 import com.btween.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -23,6 +25,7 @@ private val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
 fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
     route("/auth") {
+        rateLimit(AUTH_RATE_LIMIT) {
 
         post("/register") {
             val request = call.receive<RegisterRequest>()
@@ -91,6 +94,7 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
                 HttpStatusCode.OK,
                 AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
             )
+        }
         }
     }
 }
