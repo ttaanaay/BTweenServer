@@ -20,3 +20,9 @@ data class UpdateProfileRequest(
     val avatarUrl: String? = null,
     val bio: String? = null
 )
+
+@Serializable
+data class TopContributorResponse(
+    val user: UserResponse,
+    val quoteCount: Int
+)

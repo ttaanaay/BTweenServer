@@ -22,6 +22,11 @@ data class RefreshRequest(
 )
 
 @Serializable
+data class OAuthLoginRequest(
+    val token: String
+)
+
+@Serializable
 data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,

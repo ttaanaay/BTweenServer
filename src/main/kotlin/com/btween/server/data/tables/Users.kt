@@ -7,7 +7,9 @@ object Users : Table("users") {
     val id = long("id").autoIncrement()
     val username = varchar("username", 30).uniqueIndex()
     val email = varchar("email", 255).uniqueIndex()
-    val passwordHash = varchar("password_hash", 255)
+    // Null for accounts created via Google/Facebook/Microsoft sign-in - they never set a
+    // local password, so there's nothing to hash.
+    val passwordHash = varchar("password_hash", 255).nullable()
     val displayName = varchar("display_name", 60)
     val avatarUrl = varchar("avatar_url", 512).nullable()
     val bio = varchar("bio", 280).nullable()
@@ -15,7 +17,14 @@ object Users : Table("users") {
     val isBanned = bool("is_banned").default(false)
     // null = "use the global default setting"; true/false = explicit per-user override set by an admin.
     val autoApprove = bool("auto_approve").nullable()
+    // "GOOGLE" / "FACEBOOK" / "MICROSOFT", or null for a local email+password account.
+    val authProvider = varchar("auth_provider", 20).nullable()
+    val providerUserId = varchar("provider_user_id", 255).nullable()
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        index("idx_auth_provider_identity", isUnique = true, authProvider, providerUserId)
+    }
 }

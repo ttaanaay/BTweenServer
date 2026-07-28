@@ -1,6 +1,7 @@
 package com.btween.server.data.repository
 
 import com.btween.server.data.tables.Follows
+import com.btween.server.data.tables.Quotes
 import com.btween.server.data.tables.Users
 import com.btween.server.domain.User
 import org.jetbrains.exposed.sql.*
@@ -20,6 +21,8 @@ class UserRepository {
         isAdmin = this[Users.isAdmin],
         isBanned = this[Users.isBanned],
         autoApprove = this[Users.autoApprove],
+        authProvider = this[Users.authProvider],
+        providerUserId = this[Users.providerUserId],
         createdAt = this[Users.createdAt]
     )
 
@@ -32,6 +35,33 @@ class UserRepository {
             it[Users.createdAt] = Instant.now()
         } get Users.id
         findById(id)!!
+    }
+
+    /** Creates an account for a user who signed in via Google/Facebook/Microsoft - no password. */
+    fun createOAuthUser(
+        provider: String,
+        providerUserId: String,
+        username: String,
+        email: String,
+        displayName: String
+    ): User = transaction {
+        val id = Users.insert {
+            it[Users.username] = username
+            it[Users.email] = email
+            it[Users.passwordHash] = null
+            it[Users.displayName] = displayName
+            it[Users.authProvider] = provider
+            it[Users.providerUserId] = providerUserId
+            it[Users.createdAt] = Instant.now()
+        } get Users.id
+        findById(id)!!
+    }
+
+    fun findByProvider(provider: String, providerUserId: String): User? = transaction {
+        Users.selectAll()
+            .where { (Users.authProvider eq provider) and (Users.providerUserId eq providerUserId) }
+            .map { it.toUser() }
+            .singleOrNull()
     }
 
     fun findById(id: Long): User? = transaction {
@@ -112,4 +142,21 @@ class UserRepository {
     }
 
     fun countAll(): Long = transaction { Users.selectAll().count() }
+
+    /**
+     * Ranks users by their number of public, approved quotes. Aggregation is done in
+     * plain Kotlin rather than SQL GROUP BY - simpler and safer to reason about at this
+     * app's scale, and avoids relying on less battle-tested Exposed aggregate-query APIs.
+     */
+    fun getTopContributors(limit: Int): List<Pair<User, Int>> = transaction {
+        val ownerIds = Quotes.selectAll()
+            .where { (Quotes.status eq "APPROVED") and (Quotes.visibility eq "PUBLIC") }
+            .map { it[Quotes.ownerId] }
+
+        ownerIds.groupingBy { it }.eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(limit)
+            .mapNotNull { (ownerId, count) -> findById(ownerId)?.let { user -> user to count } }
+    }
 }

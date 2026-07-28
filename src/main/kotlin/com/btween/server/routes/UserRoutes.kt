@@ -3,6 +3,7 @@ package com.btween.server.routes
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.dto.QuoteResponse
+import com.btween.server.dto.TopContributorResponse
 import com.btween.server.dto.UpdateProfileRequest
 import com.btween.server.dto.toResponse
 import com.btween.server.exception.NotFoundException
@@ -30,6 +31,15 @@ fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepos
 private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
     route("/users") {
         authenticate(AUTH_JWT, optional = true) {
+            get("/top-contributors") {
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 10
+                val contributors = userRepository.getTopContributors(limit)
+                call.respond(contributors.map { (user, count) ->
+                    TopContributorResponse(user = user.toResponse(userRepository, viewerId), quoteCount = count)
+                })
+            }
+
             get("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull()
                     ?: throw ValidationException("Invalid user id")

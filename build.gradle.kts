@@ -29,6 +29,15 @@ dependencies {
     implementation("io.ktor:ktor-server-rate-limit-jvm:$ktorVersion")
     implementation("com.auth0:java-jwt:4.4.0")
 
+    // Outbound HTTP client - used to verify Facebook/Microsoft OAuth tokens against their
+    // respective Graph APIs (see security/FacebookTokenVerifier.kt, MicrosoftTokenVerifier.kt)
+    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
+
+    // Google's official library for verifying Google Sign-In ID tokens server-side
+    implementation("com.google.api-client:google-api-client:2.2.0")
+
     // Database - Exposed ORM + Postgres + connection pooling
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
