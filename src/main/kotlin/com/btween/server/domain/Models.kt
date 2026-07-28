@@ -10,6 +10,9 @@ data class User(
     val displayName: String,
     val avatarUrl: String?,
     val bio: String?,
+    val isAdmin: Boolean,
+    val isBanned: Boolean,
+    val autoApprove: Boolean?,
     val createdAt: Instant
 )
 
@@ -24,7 +27,12 @@ data class Quote(
     val category: String?,
     val tags: List<String>,
     val visibility: String,
+    val status: String,
     val likeCount: Int,
     val createdAt: Instant,
     val updatedAt: Instant
+)
+
+data class AppSettingsData(
+    val defaultAutoApprove: Boolean
 )

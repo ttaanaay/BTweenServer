@@ -72,6 +72,9 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
             if (!PasswordHasher.verify(request.password, user.passwordHash)) {
                 throw UnauthorizedException("Incorrect email or password")
             }
+            if (user.isBanned) {
+                throw UnauthorizedException("This account has been suspended")
+            }
 
             val accessToken = jwtService.generateAccessToken(user.id)
             val refreshToken = jwtService.generateRefreshToken(user.id)
@@ -87,6 +90,9 @@ fun Route.authRoutes(userRepository: UserRepository, jwtService: JwtService) {
                 ?: throw UnauthorizedException("Refresh token is invalid or expired")
             val user = userRepository.findById(userId)
                 ?: throw UnauthorizedException("Account no longer exists")
+            if (user.isBanned) {
+                throw UnauthorizedException("This account has been suspended")
+            }
 
             val accessToken = jwtService.generateAccessToken(user.id)
             val refreshToken = jwtService.generateRefreshToken(user.id)

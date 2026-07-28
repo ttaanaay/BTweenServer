@@ -14,6 +14,9 @@ object Quotes : Table("quotes") {
     val category = varchar("category", 60).nullable()
     val tags = varchar("tags", 500).default("")
     val visibility = varchar("visibility", 10).default("PUBLIC")
+    // PENDING -> awaiting admin review, APPROVED -> visible in the feed, REJECTED -> hidden.
+    // Decided at creation time by the owner's autoApprove setting (or the global default).
+    val status = varchar("status", 10).default("PENDING")
     val likeCount = integer("like_count").default(0)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")

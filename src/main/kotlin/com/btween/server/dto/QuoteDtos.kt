@@ -25,6 +25,7 @@ data class QuoteResponse(
     val category: String? = null,
     val tags: List<String> = emptyList(),
     val visibility: String,
+    val status: String,
     val likeCount: Int,
     val isLikedByMe: Boolean = false,
     val owner: UserResponse,

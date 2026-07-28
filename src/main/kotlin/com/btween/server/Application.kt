@@ -2,6 +2,7 @@ package com.btween.server
 
 import com.btween.server.config.AppConfig
 import com.btween.server.config.DatabaseFactory
+import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.plugins.API_RATE_LIMIT
@@ -10,6 +11,7 @@ import com.btween.server.plugins.configureRateLimiting
 import com.btween.server.plugins.configureSecurity
 import com.btween.server.plugins.configureSerialization
 import com.btween.server.plugins.configureStatusPages
+import com.btween.server.routes.adminRoutes
 import com.btween.server.routes.authRoutes
 import com.btween.server.routes.quoteRoutes
 import com.btween.server.routes.userRoutes
@@ -34,6 +36,7 @@ fun main() {
 fun Application.module(config: AppConfig) {
     val userRepository = UserRepository()
     val quoteRepository = QuoteRepository()
+    val appSettingsRepository = AppSettingsRepository()
     val jwtService = JwtService(config)
 
     configureSerialization()
@@ -56,7 +59,8 @@ fun Application.module(config: AppConfig) {
 
         rateLimit(API_RATE_LIMIT) {
             userRoutes(userRepository, quoteRepository)
-            quoteRoutes(quoteRepository, userRepository)
+            quoteRoutes(quoteRepository, userRepository, appSettingsRepository)
+            adminRoutes(userRepository, quoteRepository, appSettingsRepository)
         }
     }
 }

@@ -17,6 +17,9 @@ class UserRepository {
         displayName = this[Users.displayName],
         avatarUrl = this[Users.avatarUrl],
         bio = this[Users.bio],
+        isAdmin = this[Users.isAdmin],
+        isBanned = this[Users.isBanned],
+        autoApprove = this[Users.autoApprove],
         createdAt = this[Users.createdAt]
     )
 
@@ -90,4 +93,23 @@ class UserRepository {
     fun followingCount(userId: Long): Int = transaction {
         Follows.selectAll().where { Follows.followerId eq userId }.count().toInt()
     }
+
+    fun getAllUsers(limit: Int, offset: Long): List<User> = transaction {
+        Users.selectAll()
+            .orderBy(Users.createdAt, SortOrder.DESC)
+            .limit(limit, offset)
+            .map { it.toUser() }
+    }
+
+    fun setBanned(id: Long, banned: Boolean): User? = transaction {
+        Users.update({ Users.id eq id }) { it[Users.isBanned] = banned }
+        findById(id)
+    }
+
+    fun setAutoApprove(id: Long, autoApprove: Boolean?): User? = transaction {
+        Users.update({ Users.id eq id }) { it[Users.autoApprove] = autoApprove }
+        findById(id)
+    }
+
+    fun countAll(): Long = transaction { Users.selectAll().count() }
 }

@@ -1,5 +1,6 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.dto.QuoteRequest
@@ -39,7 +40,11 @@ private fun validateQuoteRequest(request: QuoteRequest) {
     }
 }
 
-fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepository) {
+fun Route.quoteRoutes(
+    quoteRepository: QuoteRepository,
+    userRepository: UserRepository,
+    appSettingsRepository: AppSettingsRepository
+) {
     route("/quotes") {
 
         authenticate(AUTH_JWT, optional = true) {
@@ -79,6 +84,10 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
                 val request = call.receive<QuoteRequest>()
                 validateQuoteRequest(request)
 
+                val owner = userRepository.findById(userId) ?: throw NotFoundException("Account no longer exists")
+                val autoApprove = owner.autoApprove ?: appSettingsRepository.get().defaultAutoApprove
+                val initialStatus = if (autoApprove) "APPROVED" else "PENDING"
+
                 val quote = quoteRepository.create(
                     ownerId = userId,
                     text = request.text.trim(),
@@ -88,10 +97,11 @@ fun Route.quoteRoutes(quoteRepository: QuoteRepository, userRepository: UserRepo
                     author = request.author?.trim()?.takeIf { it.length > 0 },
                     category = request.category?.trim()?.takeIf { it.length > 0 },
                     tags = request.tags,
-                    visibility = request.visibility.uppercase()
+                    visibility = request.visibility.uppercase(),
+                    status = initialStatus
                 )
-                val owner = userRepository.findById(userId)!!.toResponse(userRepository, userId)
-                call.respond(HttpStatusCode.Created, quote.toResponse(owner, isLikedByMe = false))
+                val ownerResponse = owner.toResponse(userRepository, userId)
+                call.respond(HttpStatusCode.Created, quote.toResponse(ownerResponse, isLikedByMe = false))
             }
 
             put("/{id}") {

@@ -2,6 +2,7 @@ package com.btween.server.plugins
 
 import com.btween.server.dto.ErrorResponse
 import com.btween.server.exception.ConflictException
+import com.btween.server.exception.ForbiddenException
 import com.btween.server.exception.NotFoundException
 import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
@@ -24,6 +25,9 @@ fun Application.configureStatusPages() {
         }
         exception<UnauthorizedException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse(cause.message ?: "Unauthorized"))
+        }
+        exception<ForbiddenException> { call, cause ->
+            call.respond(HttpStatusCode.Forbidden, ErrorResponse(cause.message ?: "Forbidden"))
         }
         exception<Throwable> { call, cause ->
             call.application.environment.log.error("Unhandled error", cause)

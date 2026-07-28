@@ -20,6 +20,7 @@ class QuoteRepository {
         category = this[Quotes.category],
         tags = this[Quotes.tags].split(",").map { it.trim() }.filter { it.length > 0 },
         visibility = this[Quotes.visibility],
+        status = this[Quotes.status],
         likeCount = this[Quotes.likeCount],
         createdAt = this[Quotes.createdAt],
         updatedAt = this[Quotes.updatedAt]
@@ -34,7 +35,8 @@ class QuoteRepository {
         author: String?,
         category: String?,
         tags: List<String>,
-        visibility: String
+        visibility: String,
+        status: String
     ): Quote = transaction {
         val now = Instant.now()
         val id = Quotes.insert {
@@ -47,6 +49,7 @@ class QuoteRepository {
             it[Quotes.category] = category
             it[Quotes.tags] = tags.joinToString(",")
             it[Quotes.visibility] = visibility
+            it[Quotes.status] = status
             it[Quotes.createdAt] = now
             it[Quotes.updatedAt] = now
         } get Quotes.id
@@ -83,13 +86,18 @@ class QuoteRepository {
         Quotes.deleteWhere { with(SqlExpressionBuilder) { (Quotes.id eq id) and (Quotes.ownerId eq ownerId) } } > 0
     }
 
+    /** Admin-only: deletes any quote regardless of ownership. */
+    fun adminDelete(id: Long): Boolean = transaction {
+        Quotes.deleteWhere { Quotes.id eq id } > 0
+    }
+
     fun findById(id: Long): Quote? = transaction {
         Quotes.selectAll().where { Quotes.id eq id }.map { it.toQuote() }.singleOrNull()
     }
 
     fun getPublicFeed(limit: Int, offset: Long): List<Quote> = transaction {
         Quotes.selectAll()
-            .where { Quotes.visibility eq "PUBLIC" }
+            .where { (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED") }
             .orderBy(Quotes.createdAt, SortOrder.DESC)
             .limit(limit, offset)
             .map { it.toQuote() }
@@ -97,9 +105,12 @@ class QuoteRepository {
 
     fun getUserQuotes(ownerId: Long, includePrivate: Boolean, limit: Int, offset: Long): List<Quote> = transaction {
         val query = if (includePrivate) {
+            // The owner viewing their own profile sees everything, including pending/rejected.
             Quotes.selectAll().where { Quotes.ownerId eq ownerId }
         } else {
-            Quotes.selectAll().where { (Quotes.ownerId eq ownerId) and (Quotes.visibility eq "PUBLIC") }
+            Quotes.selectAll().where {
+                (Quotes.ownerId eq ownerId) and (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED")
+            }
         }
         query.orderBy(Quotes.createdAt, SortOrder.DESC).limit(limit, offset).map { it.toQuote() }
     }
@@ -143,5 +154,26 @@ class QuoteRepository {
             .where { (Likes.userId eq userId) and (Likes.quoteId inList quoteIds) }
             .map { it[Likes.quoteId] }
             .toSet()
+    }
+
+    // ---- Admin / moderation ----
+
+    fun getByStatus(status: String, limit: Int, offset: Long): List<Quote> = transaction {
+        Quotes.selectAll()
+            .where { Quotes.status eq status }
+            .orderBy(Quotes.createdAt, SortOrder.ASC)
+            .limit(limit, offset)
+            .map { it.toQuote() }
+    }
+
+    fun setStatus(id: Long, status: String): Quote? = transaction {
+        Quotes.update({ Quotes.id eq id }) { it[Quotes.status] = status }
+        findById(id)
+    }
+
+    fun countAll(): Long = transaction { Quotes.selectAll().count() }
+
+    fun countByStatus(status: String): Long = transaction {
+        Quotes.selectAll().where { Quotes.status eq status }.count()
     }
 }
