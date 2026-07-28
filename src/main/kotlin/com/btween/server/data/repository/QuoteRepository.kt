@@ -88,7 +88,7 @@ class QuoteRepository {
 
     /** Admin-only: deletes any quote regardless of ownership. */
     fun adminDelete(id: Long): Boolean = transaction {
-        Quotes.deleteWhere { Quotes.id eq id } > 0
+        Quotes.deleteWhere { with(SqlExpressionBuilder) { Quotes.id eq id } } > 0
     }
 
     fun findById(id: Long): Quote? = transaction {
