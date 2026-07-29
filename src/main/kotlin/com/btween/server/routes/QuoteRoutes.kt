@@ -1,6 +1,7 @@
 package com.btween.server.routes
 
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.dto.QuoteRequest
@@ -43,7 +44,8 @@ private fun validateQuoteRequest(request: QuoteRequest) {
 fun Route.quoteRoutes(
     quoteRepository: QuoteRepository,
     userRepository: UserRepository,
-    appSettingsRepository: AppSettingsRepository
+    appSettingsRepository: AppSettingsRepository,
+    notificationRepository: NotificationRepository
 ) {
     route("/quotes") {
 
@@ -139,8 +141,14 @@ fun Route.quoteRoutes(
             post("/{id}/like") {
                 val userId = call.requireUserId()
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
-                quoteRepository.findById(id) ?: throw NotFoundException("Quote not found")
+                val quote = quoteRepository.findById(id) ?: throw NotFoundException("Quote not found")
                 quoteRepository.like(userId, id)
+                notificationRepository.create(
+                    recipientUserId = quote.ownerId,
+                    actorUserId = userId,
+                    type = "LIKE",
+                    quoteId = id
+                )
                 call.respond(HttpStatusCode.NoContent)
             }
 

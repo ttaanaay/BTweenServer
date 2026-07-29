@@ -38,3 +38,13 @@ data class Quote(
 data class AppSettingsData(
     val defaultAutoApprove: Boolean
 )
+
+data class Notification(
+    val id: Long,
+    val recipientUserId: Long,
+    val actorUserId: Long,
+    val type: String,
+    val quoteId: Long?,
+    val isRead: Boolean,
+    val createdAt: Instant
+)

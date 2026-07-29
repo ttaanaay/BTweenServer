@@ -1,5 +1,6 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.dto.QuoteResponse
@@ -23,9 +24,13 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
-fun Route.userRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
+fun Route.userRoutes(
+    userRepository: UserRepository,
+    quoteRepository: QuoteRepository,
+    notificationRepository: NotificationRepository
+) {
     userProfileGetRoutes(userRepository, quoteRepository)
-    userProfileMutationRoutes(userRepository)
+    userProfileMutationRoutes(userRepository, notificationRepository)
 }
 
 private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepository: QuoteRepository) {
@@ -81,7 +86,7 @@ private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepo
     }
 }
 
-private fun Route.userProfileMutationRoutes(userRepository: UserRepository) {
+private fun Route.userProfileMutationRoutes(userRepository: UserRepository, notificationRepository: NotificationRepository) {
     route("/users") {
         authenticate(AUTH_JWT, optional = true) {
             put("/me") {
@@ -103,6 +108,12 @@ private fun Route.userProfileMutationRoutes(userRepository: UserRepository) {
                     ?: throw ValidationException("Invalid user id")
                 userRepository.findById(targetId) ?: throw NotFoundException("User not found")
                 userRepository.follow(userId, targetId)
+                notificationRepository.create(
+                    recipientUserId = targetId,
+                    actorUserId = userId,
+                    type = "FOLLOW",
+                    quoteId = null
+                )
                 call.respond(HttpStatusCode.NoContent)
             }
 

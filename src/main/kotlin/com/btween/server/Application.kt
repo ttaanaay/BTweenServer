@@ -3,6 +3,7 @@ package com.btween.server
 import com.btween.server.config.AppConfig
 import com.btween.server.config.DatabaseFactory
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.plugins.API_RATE_LIMIT
@@ -13,6 +14,7 @@ import com.btween.server.plugins.configureSerialization
 import com.btween.server.plugins.configureStatusPages
 import com.btween.server.routes.adminRoutes
 import com.btween.server.routes.authRoutes
+import com.btween.server.routes.notificationRoutes
 import com.btween.server.routes.quoteRoutes
 import com.btween.server.routes.userRoutes
 import com.btween.server.security.FacebookTokenVerifier
@@ -44,6 +46,7 @@ fun Application.module(config: AppConfig) {
     val userRepository = UserRepository()
     val quoteRepository = QuoteRepository()
     val appSettingsRepository = AppSettingsRepository()
+    val notificationRepository = NotificationRepository()
     val jwtService = JwtService(config)
 
     val oauthHttpClient = HttpClient(CIO) {
@@ -72,9 +75,10 @@ fun Application.module(config: AppConfig) {
         authRoutes(userRepository, jwtService, googleVerifier, facebookVerifier, microsoftVerifier)
 
         rateLimit(API_RATE_LIMIT) {
-            userRoutes(userRepository, quoteRepository)
-            quoteRoutes(quoteRepository, userRepository, appSettingsRepository)
+            userRoutes(userRepository, quoteRepository, notificationRepository)
+            quoteRoutes(quoteRepository, userRepository, appSettingsRepository, notificationRepository)
             adminRoutes(userRepository, quoteRepository, appSettingsRepository)
+            notificationRoutes(notificationRepository, userRepository, quoteRepository)
         }
     }
 }
