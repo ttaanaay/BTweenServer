@@ -1,13 +1,18 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AuthResponse
+import com.btween.server.dto.ForgotPasswordRequest
 import com.btween.server.dto.LoginRequest
+import com.btween.server.dto.MessageResponse
 import com.btween.server.dto.OAuthLoginRequest
 import com.btween.server.dto.RefreshRequest
 import com.btween.server.dto.RegisterRequest
+import com.btween.server.dto.ResetPasswordRequest
 import com.btween.server.dto.toResponse
+import com.btween.server.email.EmailSender
 import com.btween.server.exception.ConflictException
 import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
@@ -34,7 +39,9 @@ fun Route.authRoutes(
     jwtService: JwtService,
     googleVerifier: GoogleTokenVerifier?,
     facebookVerifier: FacebookTokenVerifier,
-    microsoftVerifier: MicrosoftTokenVerifier
+    microsoftVerifier: MicrosoftTokenVerifier,
+    passwordResetRepository: PasswordResetRepository,
+    emailSender: EmailSender
 ) {
     route("/auth") {
         rateLimit(AUTH_RATE_LIMIT) {
@@ -130,6 +137,41 @@ fun Route.authRoutes(
                 val user = findOrCreateOAuthUser(userRepository, "MICROSOFT", profile)
                 if (user.isBanned) throw UnauthorizedException("This account has been suspended")
                 call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+            }
+
+            post("/forgot-password") {
+                val request = call.receive<ForgotPasswordRequest>()
+                val user = userRepository.findByEmail(request.email)
+
+                // Deliberately always respond the same way whether or not the email exists -
+                // otherwise this endpoint could be used to check which emails have accounts.
+                if (user != null && user.passwordHash != null) {
+                    val code = passwordResetRepository.createCode(user.id)
+                    emailSender.send(
+                        to = user.email,
+                        subject = "Your BTween password reset code",
+                        body = "Your password reset code is: $code\nIt expires in 15 minutes."
+                    )
+                }
+                call.respond(
+                    HttpStatusCode.OK,
+                    MessageResponse("If that email has an account, a reset code has been sent.")
+                )
+            }
+
+            post("/reset-password") {
+                val request = call.receive<ResetPasswordRequest>()
+                if (request.newPassword.length < 8) {
+                    throw ValidationException("Password must be at least 8 characters")
+                }
+                val user = userRepository.findByEmail(request.email)
+                    ?: throw ValidationException("Invalid or expired code")
+
+                val valid = passwordResetRepository.verifyAndConsumeCode(user.id, request.code)
+                if (!valid) throw ValidationException("Invalid or expired code")
+
+                userRepository.updatePassword(user.id, PasswordHasher.hash(request.newPassword))
+                call.respond(HttpStatusCode.OK, MessageResponse("Password updated"))
             }
         }
     }

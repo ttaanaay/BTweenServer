@@ -143,6 +143,37 @@ class UserRepository {
 
     fun countAll(): Long = transaction { Users.selectAll().count() }
 
+    fun updatePassword(userId: Long, newPasswordHash: String): Boolean = transaction {
+        Users.update({ Users.id eq userId }) { it[Users.passwordHash] = newPasswordHash } > 0
+    }
+
+    /** Case-insensitive search by username or display name. */
+    fun search(query: String, limit: Int): List<User> = transaction {
+        val pattern = "%${query.trim()}%"
+        Users.selectAll()
+            .where { (Users.username.lowerCase() like pattern.lowercase()) or (Users.displayName.lowerCase() like pattern.lowercase()) }
+            .limit(limit)
+            .map { it.toUser() }
+    }
+
+    fun getFollowers(userId: Long, limit: Int, offset: Long): List<User> = transaction {
+        val followerIds = Follows.selectAll()
+            .where { Follows.followingId eq userId }
+            .orderBy(Follows.createdAt, SortOrder.DESC)
+            .limit(limit, offset)
+            .map { it[Follows.followerId] }
+        followerIds.mapNotNull { findById(it) }
+    }
+
+    fun getFollowing(userId: Long, limit: Int, offset: Long): List<User> = transaction {
+        val followingIds = Follows.selectAll()
+            .where { Follows.followerId eq userId }
+            .orderBy(Follows.createdAt, SortOrder.DESC)
+            .limit(limit, offset)
+            .map { it[Follows.followingId] }
+        followingIds.mapNotNull { findById(it) }
+    }
+
     /**
      * Ranks users by their number of public, approved quotes. Aggregation is done in
      * plain Kotlin rather than SQL GROUP BY - simpler and safer to reason about at this

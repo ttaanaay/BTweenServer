@@ -4,6 +4,7 @@ import com.btween.server.data.tables.AppSettings
 import com.btween.server.data.tables.Follows
 import com.btween.server.data.tables.Likes
 import com.btween.server.data.tables.Notifications
+import com.btween.server.data.tables.PasswordResets
 import com.btween.server.data.tables.Quotes
 import com.btween.server.data.tables.Users
 import com.zaxxer.hikari.HikariConfig
@@ -32,7 +33,7 @@ object DatabaseFactory {
         Database.connect(dataSource)
 
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Users, Quotes, Follows, Likes, AppSettings, Notifications)
+            SchemaUtils.createMissingTablesAndColumns(Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets)
 
             if (AppSettings.selectAll().count() == 0L) {
                 AppSettings.insert {

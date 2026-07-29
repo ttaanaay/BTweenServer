@@ -4,8 +4,10 @@ import com.btween.server.config.AppConfig
 import com.btween.server.config.DatabaseFactory
 import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.NotificationRepository
+import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
+import com.btween.server.email.ConsoleEmailSender
 import com.btween.server.plugins.API_RATE_LIMIT
 import com.btween.server.plugins.configureCors
 import com.btween.server.plugins.configureRateLimiting
@@ -47,6 +49,8 @@ fun Application.module(config: AppConfig) {
     val quoteRepository = QuoteRepository()
     val appSettingsRepository = AppSettingsRepository()
     val notificationRepository = NotificationRepository()
+    val passwordResetRepository = PasswordResetRepository()
+    val emailSender = ConsoleEmailSender()
     val jwtService = JwtService(config)
 
     val oauthHttpClient = HttpClient(CIO) {
@@ -72,12 +76,20 @@ fun Application.module(config: AppConfig) {
 
         // authRoutes has its own internal AUTH_RATE_LIMIT wrapping (see AuthRoutes.kt) -
         // tighter than the general API limit, since brute-forcing login is the main risk.
-        authRoutes(userRepository, jwtService, googleVerifier, facebookVerifier, microsoftVerifier)
+        authRoutes(
+            userRepository,
+            jwtService,
+            googleVerifier,
+            facebookVerifier,
+            microsoftVerifier,
+            passwordResetRepository,
+            emailSender
+        )
 
         rateLimit(API_RATE_LIMIT) {
             userRoutes(userRepository, quoteRepository, notificationRepository)
             quoteRoutes(quoteRepository, userRepository, appSettingsRepository, notificationRepository)
-            adminRoutes(userRepository, quoteRepository, appSettingsRepository)
+            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository)
             notificationRoutes(notificationRepository, userRepository, quoteRepository)
         }
     }

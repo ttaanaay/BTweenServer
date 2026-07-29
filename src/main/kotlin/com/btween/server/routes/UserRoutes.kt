@@ -6,6 +6,7 @@ import com.btween.server.data.repository.UserRepository
 import com.btween.server.dto.QuoteResponse
 import com.btween.server.dto.TopContributorResponse
 import com.btween.server.dto.UpdateProfileRequest
+import com.btween.server.dto.UserResponse
 import com.btween.server.dto.toResponse
 import com.btween.server.exception.NotFoundException
 import com.btween.server.exception.ValidationException
@@ -45,6 +46,18 @@ private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepo
                 })
             }
 
+            get("/search") {
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                val query = call.parameters["q"]?.trim().orEmpty()
+                if (query.length < 2) {
+                    call.respond(emptyList<UserResponse>())
+                } else {
+                    val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 20
+                    val results = userRepository.search(query, limit)
+                    call.respond(results.map { it.toResponse(userRepository, viewerId) })
+                }
+            }
+
             get("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull()
                     ?: throw ValidationException("Invalid user id")
@@ -81,6 +94,26 @@ private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepo
                         createdAt = quote.createdAt.toString(), updatedAt = quote.updatedAt.toString()
                     )
                 })
+            }
+
+            get("/{id}/followers") {
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                userRepository.findById(id) ?: throw NotFoundException("User not found")
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 30
+                val offset = call.parameters["offset"]?.toLongOrNull() ?: 0L
+                val followers = userRepository.getFollowers(id, limit, offset)
+                call.respond(followers.map { it.toResponse(userRepository, viewerId) })
+            }
+
+            get("/{id}/following") {
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                userRepository.findById(id) ?: throw NotFoundException("User not found")
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 30
+                val offset = call.parameters["offset"]?.toLongOrNull() ?: 0L
+                val following = userRepository.getFollowing(id, limit, offset)
+                call.respond(following.map { it.toResponse(userRepository, viewerId) })
             }
         }
     }

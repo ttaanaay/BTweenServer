@@ -1,6 +1,7 @@
 package com.btween.server.routes
 
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
@@ -42,7 +43,8 @@ private suspend fun ApplicationCall.requireAdmin(userRepository: UserRepository)
 fun Route.adminRoutes(
     userRepository: UserRepository,
     quoteRepository: QuoteRepository,
-    appSettingsRepository: AppSettingsRepository
+    appSettingsRepository: AppSettingsRepository,
+    notificationRepository: NotificationRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -106,9 +108,15 @@ fun Route.adminRoutes(
             }
 
             post("/quotes/{id}/reject") {
-                call.requireAdmin(userRepository)
+                val admin = call.requireAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
                 val quote = quoteRepository.setStatus(id, "REJECTED") ?: throw NotFoundException("Quote not found")
+                notificationRepository.create(
+                    recipientUserId = quote.ownerId,
+                    actorUserId = admin.id,
+                    type = "REJECTED",
+                    quoteId = id
+                )
                 val owner = userRepository.findById(quote.ownerId)
                 call.respond(quote.toAdminResponse(owner?.username ?: "unknown"))
             }
