@@ -1,5 +1,6 @@
 package com.btween.server.data.repository
 
+import com.btween.server.data.tables.Follows
 import com.btween.server.data.tables.Likes
 import com.btween.server.data.tables.Quotes
 import com.btween.server.domain.Quote
@@ -98,6 +99,25 @@ class QuoteRepository {
     fun getPublicFeed(limit: Int, offset: Long): List<Quote> = transaction {
         Quotes.selectAll()
             .where { (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED") }
+            .orderBy(Quotes.createdAt, SortOrder.DESC)
+            .limit(limit, offset)
+            .map { it.toQuote() }
+    }
+
+    /** Public, approved quotes from accounts [userId] follows - the "Following" feed tab. */
+    fun getFollowingFeed(userId: Long, limit: Int, offset: Long): List<Quote> = transaction {
+        val followedIds = Follows.selectAll()
+            .where { Follows.followerId eq userId }
+            .map { it[Follows.followingId] }
+
+        if (followedIds.isEmpty()) return@transaction emptyList()
+
+        Quotes.selectAll()
+            .where {
+                (Quotes.ownerId inList followedIds) and
+                    (Quotes.visibility eq "PUBLIC") and
+                    (Quotes.status eq "APPROVED")
+            }
             .orderBy(Quotes.createdAt, SortOrder.DESC)
             .limit(limit, offset)
             .map { it.toQuote() }
