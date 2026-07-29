@@ -55,12 +55,13 @@ fun Route.quoteRoutes(
                 val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 20
                 val offset = call.parameters["offset"]?.toLongOrNull() ?: 0L
                 val scope = call.parameters["scope"] ?: "recommended"
+                val category = call.parameters["category"]?.trim()?.takeIf { it.isNotEmpty() }
 
                 val quotes = if (scope == "following") {
                     if (viewerId == null) throw ValidationException("Login required for the following feed")
                     quoteRepository.getFollowingFeed(viewerId, limit, offset)
                 } else {
-                    quoteRepository.getPublicFeed(limit, offset)
+                    quoteRepository.getPublicFeed(limit, offset, category)
                 }
                 val likedIds = viewerId?.let { quoteRepository.likedQuoteIds(it, quotes.map { q -> q.id }) } ?: emptySet()
                 val ownersById = quotes.map { it.ownerId }.distinct()

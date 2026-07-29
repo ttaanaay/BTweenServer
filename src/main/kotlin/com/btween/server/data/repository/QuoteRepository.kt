@@ -101,9 +101,13 @@ class QuoteRepository {
         Quotes.selectAll().where { Quotes.id eq id }.map { it.toQuote() }.singleOrNull()
     }
 
-    fun getPublicFeed(limit: Int, offset: Long): List<Quote> = transaction {
+    fun getPublicFeed(limit: Int, offset: Long, category: String? = null): List<Quote> = transaction {
         Quotes.selectAll()
-            .where { (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED") }
+            .where {
+                var condition = (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED")
+                if (category != null) condition = condition and (Quotes.category eq category)
+                condition
+            }
             .orderBy(Quotes.createdAt, SortOrder.DESC)
             .limit(limit, offset)
             .map { it.toQuote() }
