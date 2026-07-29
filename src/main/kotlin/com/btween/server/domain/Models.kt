@@ -49,3 +49,11 @@ data class Notification(
     val isRead: Boolean,
     val createdAt: Instant
 )
+
+data class Comment(
+    val id: Long,
+    val quoteId: Long,
+    val userId: Long,
+    val text: String,
+    val createdAt: Instant
+)

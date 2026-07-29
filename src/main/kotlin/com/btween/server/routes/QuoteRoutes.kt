@@ -1,6 +1,7 @@
 package com.btween.server.routes
 
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
@@ -45,7 +46,8 @@ fun Route.quoteRoutes(
     quoteRepository: QuoteRepository,
     userRepository: UserRepository,
     appSettingsRepository: AppSettingsRepository,
-    notificationRepository: NotificationRepository
+    notificationRepository: NotificationRepository,
+    commentRepository: CommentRepository
 ) {
     route("/quotes") {
 
@@ -83,7 +85,8 @@ fun Route.quoteRoutes(
 
                 val owner = userRepository.findById(quote.ownerId)!!.toResponse(userRepository, viewerId)
                 val isLiked = viewerId?.let { quoteRepository.likedQuoteIds(it, listOf(quote.id)).size > 0 } ?: false
-                call.respond(quote.toResponse(owner, isLiked))
+                val commentCount = commentRepository.countForQuote(quote.id).toInt()
+                call.respond(quote.toResponse(owner, isLiked, commentCount))
             }
         }
 

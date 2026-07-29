@@ -1,6 +1,7 @@
 package com.btween.server.dto
 
 import com.btween.server.data.repository.UserRepository
+import com.btween.server.domain.Comment
 import com.btween.server.domain.Quote
 import com.btween.server.domain.User
 import java.time.format.DateTimeFormatter
@@ -19,7 +20,7 @@ fun User.toResponse(
     isFollowedByMe = viewerId != null && viewerId != id && userRepository.isFollowing(viewerId, id)
 )
 
-fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean): QuoteResponse = QuoteResponse(
+fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean, commentCount: Int = 0): QuoteResponse = QuoteResponse(
     id = id,
     text = text,
     sourceTitle = sourceTitle,
@@ -32,6 +33,7 @@ fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean): QuoteResponse =
     visibility = visibility,
     status = status,
     likeCount = likeCount,
+    commentCount = commentCount,
     isLikedByMe = isLikedByMe,
     owner = owner,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt),
@@ -62,5 +64,13 @@ fun Quote.toAdminResponse(ownerUsername: String): AdminQuoteResponse = AdminQuot
     likeCount = likeCount,
     ownerId = ownerId,
     ownerUsername = ownerUsername,
+    createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
+)
+
+fun Comment.toResponse(author: UserResponse): CommentResponse = CommentResponse(
+    id = id,
+    quoteId = quoteId,
+    text = text,
+    author = author,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )

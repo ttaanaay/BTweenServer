@@ -29,6 +29,7 @@ data class QuoteResponse(
     val visibility: String,
     val status: String,
     val likeCount: Int,
+    val commentCount: Int = 0,
     val isLikedByMe: Boolean = false,
     val owner: UserResponse,
     val createdAt: String,

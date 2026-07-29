@@ -1,6 +1,7 @@
 package com.btween.server.config
 
 import com.btween.server.data.tables.AppSettings
+import com.btween.server.data.tables.Comments
 import com.btween.server.data.tables.Follows
 import com.btween.server.data.tables.Likes
 import com.btween.server.data.tables.Notifications
@@ -33,7 +34,7 @@ object DatabaseFactory {
         Database.connect(dataSource)
 
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets)
+            SchemaUtils.createMissingTablesAndColumns(Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets, Comments)
 
             if (AppSettings.selectAll().count() == 0L) {
                 AppSettings.insert {

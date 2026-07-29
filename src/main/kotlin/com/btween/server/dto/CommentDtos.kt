@@ -1,0 +1,17 @@
+package com.btween.server.dto
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class CommentRequest(
+    val text: String
+)
+
+@Serializable
+data class CommentResponse(
+    val id: Long,
+    val quoteId: Long,
+    val text: String,
+    val author: UserResponse,
+    val createdAt: String
+)
