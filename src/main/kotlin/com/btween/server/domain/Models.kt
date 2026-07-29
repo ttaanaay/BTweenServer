@@ -28,6 +28,7 @@ data class Quote(
     val author: String?,
     val category: String?,
     val tags: List<String>,
+    val imageUrl: String?,
     val visibility: String,
     val status: String,
     val likeCount: Int,

@@ -11,6 +11,7 @@ data class QuoteRequest(
     val author: String? = null,
     val category: String? = null,
     val tags: List<String> = emptyList(),
+    val imageUrl: String? = null,
     val visibility: String = "PUBLIC"
 )
 
@@ -24,6 +25,7 @@ data class QuoteResponse(
     val author: String? = null,
     val category: String? = null,
     val tags: List<String> = emptyList(),
+    val imageUrl: String? = null,
     val visibility: String,
     val status: String,
     val likeCount: Int,

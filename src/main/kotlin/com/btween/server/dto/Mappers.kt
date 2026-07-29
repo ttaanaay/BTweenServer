@@ -28,6 +28,7 @@ fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean): QuoteResponse =
     author = author,
     category = category,
     tags = tags,
+    imageUrl = imageUrl,
     visibility = visibility,
     status = status,
     likeCount = likeCount,

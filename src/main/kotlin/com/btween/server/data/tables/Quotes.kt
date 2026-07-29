@@ -13,6 +13,8 @@ object Quotes : Table("quotes") {
     val author = varchar("author", 120).nullable()
     val category = varchar("category", 60).nullable()
     val tags = varchar("tags", 500).default("")
+    // Optional background image, uploaded to Cloudinary client-side same as avatars.
+    val imageUrl = varchar("image_url", 500).nullable()
     val visibility = varchar("visibility", 10).default("PUBLIC")
     // PENDING -> awaiting admin review, APPROVED -> visible in the feed, REJECTED -> hidden.
     // Decided at creation time by the owner's autoApprove setting (or the global default).

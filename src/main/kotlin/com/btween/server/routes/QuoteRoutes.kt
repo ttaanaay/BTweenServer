@@ -105,6 +105,7 @@ fun Route.quoteRoutes(
                     author = request.author?.trim()?.takeIf { it.length > 0 },
                     category = request.category?.trim()?.takeIf { it.length > 0 },
                     tags = request.tags,
+                    imageUrl = request.imageUrl?.trim()?.takeIf { it.length > 0 },
                     visibility = request.visibility.uppercase(),
                     status = initialStatus
                 )
@@ -128,6 +129,7 @@ fun Route.quoteRoutes(
                     author = request.author?.trim()?.takeIf { it.length > 0 },
                     category = request.category?.trim()?.takeIf { it.length > 0 },
                     tags = request.tags,
+                    imageUrl = request.imageUrl?.trim()?.takeIf { it.length > 0 },
                     visibility = request.visibility.uppercase()
                 ) ?: throw NotFoundException("Quote not found, or you don't own it")
 

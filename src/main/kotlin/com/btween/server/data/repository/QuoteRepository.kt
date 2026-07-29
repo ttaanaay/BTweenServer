@@ -20,6 +20,7 @@ class QuoteRepository {
         author = this[Quotes.author],
         category = this[Quotes.category],
         tags = this[Quotes.tags].split(",").map { it.trim() }.filter { it.length > 0 },
+        imageUrl = this[Quotes.imageUrl],
         visibility = this[Quotes.visibility],
         status = this[Quotes.status],
         likeCount = this[Quotes.likeCount],
@@ -36,6 +37,7 @@ class QuoteRepository {
         author: String?,
         category: String?,
         tags: List<String>,
+        imageUrl: String?,
         visibility: String,
         status: String
     ): Quote = transaction {
@@ -49,6 +51,7 @@ class QuoteRepository {
             it[Quotes.author] = author
             it[Quotes.category] = category
             it[Quotes.tags] = tags.joinToString(",")
+            it[Quotes.imageUrl] = imageUrl
             it[Quotes.visibility] = visibility
             it[Quotes.status] = status
             it[Quotes.createdAt] = now
@@ -67,6 +70,7 @@ class QuoteRepository {
         author: String?,
         category: String?,
         tags: List<String>,
+        imageUrl: String?,
         visibility: String
     ): Quote? = transaction {
         val updated = Quotes.update({ (Quotes.id eq id) and (Quotes.ownerId eq ownerId) }) {
@@ -77,6 +81,7 @@ class QuoteRepository {
             it[Quotes.author] = author
             it[Quotes.category] = category
             it[Quotes.tags] = tags.joinToString(",")
+            it[Quotes.imageUrl] = imageUrl
             it[Quotes.visibility] = visibility
             it[Quotes.updatedAt] = Instant.now()
         }
