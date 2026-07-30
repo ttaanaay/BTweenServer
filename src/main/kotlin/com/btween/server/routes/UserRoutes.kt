@@ -135,6 +135,12 @@ private fun Route.userProfileMutationRoutes(userRepository: UserRepository, noti
                 call.respond(updated.toResponse(userRepository, userId))
             }
 
+            delete("/me") {
+                val userId = call.requireUserId()
+                userRepository.deleteAccount(userId)
+                call.respond(HttpStatusCode.NoContent)
+            }
+
             post("/{id}/follow") {
                 val userId = call.requireUserId()
                 val targetId = call.parameters["id"]?.toLongOrNull()

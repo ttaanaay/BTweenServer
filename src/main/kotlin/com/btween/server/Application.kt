@@ -5,9 +5,12 @@ import com.btween.server.config.DatabaseFactory
 import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.CollectionRepository
 import com.btween.server.data.repository.CommentRepository
+import com.btween.server.data.repository.DeviceTokenRepository
+import com.btween.server.data.repository.EmailVerificationRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.QuoteRepository
+import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.email.ConsoleEmailSender
 import com.btween.server.plugins.API_RATE_LIMIT
@@ -16,12 +19,16 @@ import com.btween.server.plugins.configureRateLimiting
 import com.btween.server.plugins.configureSecurity
 import com.btween.server.plugins.configureSerialization
 import com.btween.server.plugins.configureStatusPages
+import com.btween.server.push.PushNotificationService
 import com.btween.server.routes.adminRoutes
 import com.btween.server.routes.authRoutes
 import com.btween.server.routes.collectionRoutes
 import com.btween.server.routes.commentRoutes
+import com.btween.server.routes.cronRoutes
+import com.btween.server.routes.deviceRoutes
 import com.btween.server.routes.notificationRoutes
 import com.btween.server.routes.quoteRoutes
+import com.btween.server.routes.reportRoutes
 import com.btween.server.routes.userRoutes
 import com.btween.server.security.FacebookTokenVerifier
 import com.btween.server.security.GoogleTokenVerifier
@@ -55,9 +62,22 @@ fun Application.module(config: AppConfig) {
     val notificationRepository = NotificationRepository()
     val commentRepository = CommentRepository()
     val collectionRepository = CollectionRepository()
+    val reportRepository = ReportRepository()
     val passwordResetRepository = PasswordResetRepository()
+    val emailVerificationRepository = EmailVerificationRepository()
+    val deviceTokenRepository = DeviceTokenRepository()
     val emailSender = ConsoleEmailSender()
     val jwtService = JwtService(config)
+
+    // Nullable, same pattern as the Google Sign-In verifier: the server boots fine without
+    // this configured, only the daily-quote push feature won't work until it is.
+    val pushNotificationService = config.firebaseServiceAccountJson?.let {
+        try {
+            PushNotificationService(it)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     val oauthHttpClient = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
@@ -89,16 +109,23 @@ fun Application.module(config: AppConfig) {
             facebookVerifier,
             microsoftVerifier,
             passwordResetRepository,
+            emailVerificationRepository,
             emailSender
         )
 
         rateLimit(API_RATE_LIMIT) {
             userRoutes(userRepository, quoteRepository, notificationRepository)
             quoteRoutes(quoteRepository, userRepository, appSettingsRepository, notificationRepository, commentRepository)
-            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository)
+            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository)
             notificationRoutes(notificationRepository, userRepository, quoteRepository)
             commentRoutes(commentRepository, quoteRepository, userRepository, notificationRepository)
             collectionRoutes(collectionRepository, quoteRepository, userRepository)
+            reportRoutes(reportRepository)
+            deviceRoutes(deviceTokenRepository)
         }
+
+        // Not JWT-authenticated (an external cron service can't do an interactive login) -
+        // protected by its own shared-secret header check instead. See CronRoutes.kt.
+        cronRoutes(quoteRepository, deviceTokenRepository, pushNotificationService, config.dailyQuoteCronSecret)
     }
 }

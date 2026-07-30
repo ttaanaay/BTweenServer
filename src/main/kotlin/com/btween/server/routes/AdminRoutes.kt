@@ -3,10 +3,12 @@ package com.btween.server.routes
 import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
+import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AdminStatsResponse
 import com.btween.server.dto.AppSettingsResponse
+import com.btween.server.dto.ReportResponse
 import com.btween.server.dto.SetAutoApproveRequest
 import com.btween.server.dto.SetBannedRequest
 import com.btween.server.dto.UpdateAppSettingsRequest
@@ -27,6 +29,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import java.time.format.DateTimeFormatter
 
 /**
  * Verifies the caller is a signed-in admin, returning their [User]. Every admin route calls
@@ -44,7 +47,8 @@ fun Route.adminRoutes(
     userRepository: UserRepository,
     quoteRepository: QuoteRepository,
     appSettingsRepository: AppSettingsRepository,
-    notificationRepository: NotificationRepository
+    notificationRepository: NotificationRepository,
+    reportRepository: ReportRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -140,6 +144,42 @@ fun Route.adminRoutes(
                 val request = call.receive<UpdateAppSettingsRequest>()
                 val settings = appSettingsRepository.setDefaultAutoApprove(request.defaultAutoApprove)
                 call.respond(AppSettingsResponse(settings.defaultAutoApprove))
+            }
+
+            get("/reports") {
+                call.requireAdmin(userRepository)
+                val status = call.parameters["status"]?.uppercase() ?: "PENDING"
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
+                val offset = call.parameters["offset"]?.toLongOrNull() ?: 0L
+
+                val reports = reportRepository.getByStatus(status, limit, offset)
+                call.respond(reports.map { report ->
+                    val reporter = userRepository.findById(report.reporterId)
+                    ReportResponse(
+                        id = report.id,
+                        targetType = report.targetType,
+                        targetId = report.targetId,
+                        reason = report.reason,
+                        details = report.details,
+                        status = report.status,
+                        reporterUsername = reporter?.username ?: "unknown",
+                        createdAt = DateTimeFormatter.ISO_INSTANT.format(report.createdAt)
+                    )
+                })
+            }
+
+            post("/reports/{id}/resolve") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                reportRepository.updateStatus(id, "RESOLVED")
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            post("/reports/{id}/dismiss") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                reportRepository.updateStatus(id, "DISMISSED")
+                call.respond(HttpStatusCode.NoContent)
             }
         }
     }

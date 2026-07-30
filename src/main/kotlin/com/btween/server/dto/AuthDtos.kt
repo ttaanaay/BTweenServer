@@ -42,6 +42,17 @@ data class ResetPasswordRequest(
 data class MessageResponse(val message: String)
 
 @Serializable
+data class VerifyEmailRequest(
+    val email: String,
+    val code: String
+)
+
+@Serializable
+data class ResendVerificationRequest(
+    val email: String
+)
+
+@Serializable
 data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,

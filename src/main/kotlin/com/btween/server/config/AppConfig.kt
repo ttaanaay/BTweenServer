@@ -20,7 +20,15 @@ data class AppConfig(
     // Only /auth/oauth/google needs this. Left null (rather than required) so the server
     // still boots normally before you've set up Google Sign-In - that one endpoint just
     // fails until it's configured, everything else works as before.
-    val googleClientId: String?
+    val googleClientId: String?,
+    // The full contents (not a file path) of the Firebase service account JSON key, so it
+    // can be set directly as a Render env var without needing to commit or mount a file.
+    // Only the daily-quote push notification feature needs this.
+    val firebaseServiceAccountJson: String?,
+    // A shared secret the external cron job (see docs) must send to trigger the daily
+    // push - there's no interactive user to log in as, so this substitutes for JWT auth on
+    // that one endpoint.
+    val dailyQuoteCronSecret: String?
 ) {
     companion object {
         /**
@@ -44,7 +52,9 @@ data class AppConfig(
                 jwtAccessTokenExpiryMinutes = System.getenv("JWT_ACCESS_EXPIRY_MINUTES")?.toLongOrNull() ?: 60L,
                 jwtRefreshTokenExpiryDays = System.getenv("JWT_REFRESH_EXPIRY_DAYS")?.toLongOrNull() ?: 30L,
                 allowedCorsHost = System.getenv("CORS_ALLOWED_HOST"),
-                googleClientId = System.getenv("GOOGLE_CLIENT_ID")
+                googleClientId = System.getenv("GOOGLE_CLIENT_ID"),
+                firebaseServiceAccountJson = System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON"),
+                dailyQuoteCronSecret = System.getenv("DAILY_QUOTE_CRON_SECRET")
             )
         }
 
