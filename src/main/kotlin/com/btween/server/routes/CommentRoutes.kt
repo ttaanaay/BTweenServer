@@ -19,6 +19,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
 fun Route.commentRoutes(
@@ -70,6 +71,20 @@ fun Route.commentRoutes(
 
     route("/comments/{id}") {
         authenticate(AUTH_JWT) {
+            put {
+                val userId = call.requireUserId()
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid comment id")
+                val request = call.receive<CommentRequest>()
+                val text = request.text.trim()
+                if (text.isEmpty()) throw ValidationException("Comment can't be empty")
+                if (text.length > 1000) throw ValidationException("Comment is too long")
+
+                val updated = commentRepository.update(id, userId, text)
+                    ?: throw UnauthorizedException("Comment not found, or you don't own it")
+                val author = userRepository.findById(userId)!!.toResponse(userRepository, userId)
+                call.respond(updated.toResponse(author))
+            }
+
             delete {
                 val userId = call.requireUserId()
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid comment id")

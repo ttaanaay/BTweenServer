@@ -10,6 +10,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import java.time.Instant
 
 class CommentRepository {
@@ -19,7 +20,8 @@ class CommentRepository {
         quoteId = this[Comments.quoteId],
         userId = this[Comments.userId],
         text = this[Comments.text],
-        createdAt = this[Comments.createdAt]
+        createdAt = this[Comments.createdAt],
+        updatedAt = this[Comments.updatedAt]
     )
 
     fun create(quoteId: Long, userId: Long, text: String): Comment = transaction {
@@ -30,6 +32,15 @@ class CommentRepository {
             it[Comments.createdAt] = Instant.now()
         } get Comments.id
         Comments.selectAll().where { Comments.id eq id }.map { it.toComment() }.single()
+    }
+
+    /** Updates if [userId] owns the comment. Returns the updated Comment, or null if not found/owned. */
+    fun update(id: Long, userId: Long, text: String): Comment? = transaction {
+        val updated = Comments.update({ (Comments.id eq id) and (Comments.userId eq userId) }) {
+            it[Comments.text] = text
+            it[Comments.updatedAt] = Instant.now()
+        }
+        if (updated > 0) findById(id) else null
     }
 
     fun getForQuote(quoteId: Long, limit: Int, offset: Long): List<Comment> = transaction {

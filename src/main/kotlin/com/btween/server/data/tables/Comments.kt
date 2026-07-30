@@ -10,6 +10,7 @@ object Comments : Table("comments") {
     val userId = long("user_id").references(Users.id, onDelete = ReferenceOption.CASCADE)
     val text = varchar("text", 1000)
     val createdAt = timestamp("created_at")
+    val updatedAt = timestamp("updated_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

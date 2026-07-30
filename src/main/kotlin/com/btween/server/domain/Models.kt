@@ -55,5 +55,13 @@ data class Comment(
     val quoteId: Long,
     val userId: Long,
     val text: String,
+    val createdAt: Instant,
+    val updatedAt: Instant?
+)
+
+data class QuoteCollection(
+    val id: Long,
+    val ownerId: Long,
+    val name: String,
     val createdAt: Instant
 )

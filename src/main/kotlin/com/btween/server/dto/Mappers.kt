@@ -3,6 +3,7 @@ package com.btween.server.dto
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.Comment
 import com.btween.server.domain.Quote
+import com.btween.server.domain.QuoteCollection
 import com.btween.server.domain.User
 import java.time.format.DateTimeFormatter
 
@@ -72,5 +73,13 @@ fun Comment.toResponse(author: UserResponse): CommentResponse = CommentResponse(
     quoteId = quoteId,
     text = text,
     author = author,
+    isEdited = updatedAt != null,
+    createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
+)
+
+fun QuoteCollection.toResponse(quoteCount: Int): CollectionResponse = CollectionResponse(
+    id = id,
+    name = name,
+    quoteCount = quoteCount,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )
