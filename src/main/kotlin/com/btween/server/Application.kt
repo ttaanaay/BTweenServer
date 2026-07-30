@@ -75,9 +75,18 @@ fun Application.module(config: AppConfig) {
         try {
             PushNotificationService(it)
         } catch (e: Exception) {
+            println("=== Firebase push notification setup failed: ${e.message} ===")
+            e.printStackTrace()
             null
         }
     }
+
+    println(
+        "Daily quote push notification config: " +
+            "FIREBASE_SERVICE_ACCOUNT_JSON=${if (config.firebaseServiceAccountJson != null) "set" else "MISSING"}, " +
+            "DAILY_QUOTE_CRON_SECRET=${if (config.dailyQuoteCronSecret != null) "set" else "MISSING"}, " +
+            "pushNotificationService=${if (pushNotificationService != null) "initialized OK" else "FAILED or not configured"}"
+    )
 
     val oauthHttpClient = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
