@@ -1,6 +1,12 @@
 package com.btween.server.data.repository
 
+import com.btween.server.data.tables.CollectionItems
+import com.btween.server.data.tables.Collections
+import com.btween.server.data.tables.Comments
 import com.btween.server.data.tables.Follows
+import com.btween.server.data.tables.Likes
+import com.btween.server.data.tables.Notifications
+import com.btween.server.data.tables.PasswordResets
 import com.btween.server.data.tables.Quotes
 import com.btween.server.data.tables.Users
 import com.btween.server.domain.User
@@ -20,6 +26,7 @@ class UserRepository {
         bio = this[Users.bio],
         isAdmin = this[Users.isAdmin],
         isBanned = this[Users.isBanned],
+        emailVerified = this[Users.emailVerified],
         autoApprove = this[Users.autoApprove],
         authProvider = this[Users.authProvider],
         providerUserId = this[Users.providerUserId],
@@ -32,12 +39,14 @@ class UserRepository {
             it[Users.email] = email
             it[Users.passwordHash] = passwordHash
             it[Users.displayName] = displayName
+            it[Users.emailVerified] = false
             it[Users.createdAt] = Instant.now()
         } get Users.id
         findById(id)!!
     }
 
-    /** Creates an account for a user who signed in via Google/Facebook/Microsoft - no password. */
+    /** Creates an account for a user who signed in via Google/Facebook/Microsoft - no password.
+     * The provider already verified this email address, so it starts out verified here too. */
     fun createOAuthUser(
         provider: String,
         providerUserId: String,
@@ -52,6 +61,7 @@ class UserRepository {
             it[Users.displayName] = displayName
             it[Users.authProvider] = provider
             it[Users.providerUserId] = providerUserId
+            it[Users.emailVerified] = true
             it[Users.createdAt] = Instant.now()
         } get Users.id
         findById(id)!!
@@ -145,6 +155,63 @@ class UserRepository {
 
     fun updatePassword(userId: Long, newPasswordHash: String): Boolean = transaction {
         Users.update({ Users.id eq userId }) { it[Users.passwordHash] = newPasswordHash } > 0
+    }
+
+    fun markEmailVerified(userId: Long): Boolean = transaction {
+        Users.update({ Users.id eq userId }) { it[Users.emailVerified] = true } > 0
+    }
+
+    /**
+     * Deletes the account and everything it owns. The relevant tables already declare
+     * ON DELETE CASCADE for these foreign keys, but this project's schema has evolved
+     * iteratively via `createMissingTablesAndColumns` rather than fresh `CREATE TABLE`s, so
+     * there's no strong guarantee every constraint was retroactively applied to the live
+     * database. Deleting dependents by hand first, in dependency order, means this works
+     * correctly either way - the manual deletes are simply redundant (and harmless) on rows
+     * the database would have cascaded on its own.
+     */
+    fun deleteAccount(userId: Long): Boolean = transaction {
+        val ownedQuoteIds = Quotes.selectAll().where { Quotes.ownerId eq userId }.map { it[Quotes.id] }
+
+        // Comments: ones this user wrote, and ones anyone wrote on this user's quotes.
+        Comments.deleteWhere { with(SqlExpressionBuilder) { Comments.userId eq userId } }
+        if (ownedQuoteIds.isNotEmpty()) {
+            Comments.deleteWhere { with(SqlExpressionBuilder) { Comments.quoteId inList ownedQuoteIds } }
+        }
+
+        // Likes: ones this user gave, and ones anyone gave on this user's quotes.
+        Likes.deleteWhere { with(SqlExpressionBuilder) { Likes.userId eq userId } }
+        if (ownedQuoteIds.isNotEmpty()) {
+            Likes.deleteWhere { with(SqlExpressionBuilder) { Likes.quoteId inList ownedQuoteIds } }
+        }
+
+        // Collections: this user's own collections and their items, plus any OTHER user's
+        // collection items that point at a quote this user owned (about to be deleted).
+        val ownCollectionIds = Collections.selectAll().where { Collections.ownerId eq userId }.map { it[Collections.id] }
+        if (ownCollectionIds.isNotEmpty()) {
+            CollectionItems.deleteWhere { with(SqlExpressionBuilder) { CollectionItems.collectionId inList ownCollectionIds } }
+        }
+        if (ownedQuoteIds.isNotEmpty()) {
+            CollectionItems.deleteWhere { with(SqlExpressionBuilder) { CollectionItems.quoteId inList ownedQuoteIds } }
+        }
+        Collections.deleteWhere { with(SqlExpressionBuilder) { Collections.ownerId eq userId } }
+
+        // Notifications: this user was either the recipient or the actor.
+        Notifications.deleteWhere {
+            with(SqlExpressionBuilder) { (Notifications.recipientUserId eq userId) or (Notifications.actorUserId eq userId) }
+        }
+
+        // Follows: this user either side of the relationship.
+        Follows.deleteWhere {
+            with(SqlExpressionBuilder) { (Follows.followerId eq userId) or (Follows.followingId eq userId) }
+        }
+
+        PasswordResets.deleteWhere { with(SqlExpressionBuilder) { PasswordResets.userId eq userId } }
+
+        // Quotes owned by this user, now that nothing else references them.
+        Quotes.deleteWhere { with(SqlExpressionBuilder) { Quotes.ownerId eq userId } }
+
+        Users.deleteWhere { with(SqlExpressionBuilder) { Users.id eq userId } } > 0
     }
 
     /** Case-insensitive search by username or display name. */

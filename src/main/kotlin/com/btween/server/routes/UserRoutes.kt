@@ -3,15 +3,18 @@ package com.btween.server.routes
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.UserRepository
+import com.btween.server.dto.DeleteAccountRequest
 import com.btween.server.dto.QuoteResponse
 import com.btween.server.dto.TopContributorResponse
 import com.btween.server.dto.UpdateProfileRequest
 import com.btween.server.dto.UserResponse
 import com.btween.server.dto.toResponse
 import com.btween.server.exception.NotFoundException
+import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
 import com.btween.server.plugins.AUTH_JWT
 import com.btween.server.plugins.requireUserId
+import com.btween.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -133,6 +136,24 @@ private fun Route.userProfileMutationRoutes(userRepository: UserRepository, noti
                     bio = request.bio
                 ) ?: throw NotFoundException("User not found")
                 call.respond(updated.toResponse(userRepository, userId))
+            }
+
+            delete("/me") {
+                val userId = call.requireUserId()
+                val request = call.receive<DeleteAccountRequest>()
+                val user = userRepository.findById(userId) ?: throw NotFoundException("User not found")
+
+                if (user.passwordHash != null) {
+                    if (!PasswordHasher.verify(request.password, user.passwordHash)) {
+                        throw UnauthorizedException("Incorrect password")
+                    }
+                }
+                // OAuth-only accounts (no passwordHash) never set a password, so there's
+                // nothing to verify against - being authenticated as this user is already
+                // the strongest check available for them.
+
+                userRepository.deleteAccount(userId)
+                call.respond(HttpStatusCode.NoContent)
             }
 
             post("/{id}/follow") {

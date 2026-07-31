@@ -12,6 +12,7 @@ data class User(
     val bio: String?,
     val isAdmin: Boolean,
     val isBanned: Boolean,
+    val emailVerified: Boolean,
     val autoApprove: Boolean?,
     val authProvider: String?,
     val providerUserId: String?,
@@ -63,5 +64,16 @@ data class QuoteCollection(
     val id: Long,
     val ownerId: Long,
     val name: String,
+    val createdAt: Instant
+)
+
+data class Report(
+    val id: Long,
+    val reporterId: Long,
+    val targetType: String,
+    val targetId: Long,
+    val reason: String,
+    val details: String?,
+    val status: String,
     val createdAt: Instant
 )

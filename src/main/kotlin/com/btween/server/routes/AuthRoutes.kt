@@ -1,9 +1,11 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.EmailVerificationRepository
 import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AuthResponse
+import com.btween.server.dto.ChangePasswordRequest
 import com.btween.server.dto.ForgotPasswordRequest
 import com.btween.server.dto.LoginRequest
 import com.btween.server.dto.MessageResponse
@@ -11,12 +13,17 @@ import com.btween.server.dto.OAuthLoginRequest
 import com.btween.server.dto.RefreshRequest
 import com.btween.server.dto.RegisterRequest
 import com.btween.server.dto.ResetPasswordRequest
+import com.btween.server.dto.ResendVerificationRequest
+import com.btween.server.dto.VerifyEmailRequest
 import com.btween.server.dto.toResponse
 import com.btween.server.email.EmailSender
 import com.btween.server.exception.ConflictException
+import com.btween.server.exception.NotFoundException
 import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
+import com.btween.server.plugins.AUTH_JWT
 import com.btween.server.plugins.AUTH_RATE_LIMIT
+import com.btween.server.plugins.requireUserId
 import com.btween.server.security.FacebookTokenVerifier
 import com.btween.server.security.GoogleTokenVerifier
 import com.btween.server.security.JwtService
@@ -24,6 +31,7 @@ import com.btween.server.security.MicrosoftTokenVerifier
 import com.btween.server.security.OAuthProfile
 import com.btween.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -41,6 +49,7 @@ fun Route.authRoutes(
     facebookVerifier: FacebookTokenVerifier,
     microsoftVerifier: MicrosoftTokenVerifier,
     passwordResetRepository: PasswordResetRepository,
+    emailVerificationRepository: EmailVerificationRepository,
     emailSender: EmailSender
 ) {
     route("/auth") {
@@ -74,6 +83,14 @@ fun Route.authRoutes(
                     passwordHash = PasswordHasher.hash(request.password),
                     displayName = request.displayName.trim()
                 )
+
+                val code = emailVerificationRepository.createCode(user.id)
+                emailSender.send(
+                    to = user.email,
+                    subject = "Verify your BTween email",
+                    body = "Your verification code is: $code\nIt expires in 15 minutes."
+                )
+
                 call.respond(HttpStatusCode.Created, buildAuthResponse(user, jwtService, userRepository))
             }
 
@@ -172,6 +189,56 @@ fun Route.authRoutes(
 
                 userRepository.updatePassword(user.id, PasswordHasher.hash(request.newPassword))
                 call.respond(HttpStatusCode.OK, MessageResponse("Password updated"))
+            }
+
+            post("/verify-email") {
+                val request = call.receive<VerifyEmailRequest>()
+                val user = userRepository.findByEmail(request.email)
+                    ?: throw ValidationException("Invalid or expired code")
+
+                val valid = emailVerificationRepository.verifyAndConsumeCode(user.id, request.code)
+                if (!valid) throw ValidationException("Invalid or expired code")
+
+                userRepository.markEmailVerified(user.id)
+                call.respond(HttpStatusCode.OK, MessageResponse("Email verified"))
+            }
+
+            post("/resend-verification") {
+                val request = call.receive<ResendVerificationRequest>()
+                val user = userRepository.findByEmail(request.email)
+
+                // Same "always respond the same way" pattern as forgot-password, so this
+                // can't be used to probe which emails have accounts.
+                if (user != null && !user.emailVerified) {
+                    val code = emailVerificationRepository.createCode(user.id)
+                    emailSender.send(
+                        to = user.email,
+                        subject = "Verify your BTween email",
+                        body = "Your verification code is: $code\nIt expires in 15 minutes."
+                    )
+                }
+                call.respond(HttpStatusCode.OK, MessageResponse("If that email needs verifying, a new code has been sent."))
+            }
+
+            authenticate(AUTH_JWT) {
+                post("/change-password") {
+                    val userId = call.requireUserId()
+                    val request = call.receive<ChangePasswordRequest>()
+                    val user = userRepository.findById(userId) ?: throw NotFoundException("User not found")
+
+                    if (user.passwordHash == null) {
+                        throw ValidationException("This account signed in with Google/Facebook/Microsoft and has no password to change")
+                    }
+                    if (!PasswordHasher.verify(request.currentPassword, user.passwordHash)) {
+                        throw UnauthorizedException("Current password is incorrect")
+                    }
+                    if (request.newPassword.length < 8) {
+                        throw ValidationException("New password must be at least 8 characters")
+                    }
+
+                    userRepository.updatePassword(userId, PasswordHasher.hash(request.newPassword))
+                    call.respond(HttpStatusCode.OK, MessageResponse("Password changed"))
+                }
             }
         }
     }

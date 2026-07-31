@@ -38,6 +38,9 @@ dependencies {
     // Google's official library for verifying Google Sign-In ID tokens server-side
     implementation("com.google.api-client:google-api-client:2.2.0")
 
+    // Firebase Admin SDK - sends the daily-quote push notification via FCM
+    implementation("com.google.firebase:firebase-admin:9.3.0")
+
     // Database - Exposed ORM + Postgres + connection pooling
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")

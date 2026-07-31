@@ -15,6 +15,10 @@ object Users : Table("users") {
     val bio = varchar("bio", 280).nullable()
     val isAdmin = bool("is_admin").default(false)
     val isBanned = bool("is_banned").default(false)
+    // OAuth providers already verify email ownership themselves, so accounts created via
+    // Google/Facebook/Microsoft start out true; local email+password accounts start false
+    // and flip to true once the user enters their emailed verification code.
+    val emailVerified = bool("email_verified").default(false)
     // null = "use the global default setting"; true/false = explicit per-user override set by an admin.
     val autoApprove = bool("auto_approve").nullable()
     // "GOOGLE" / "FACEBOOK" / "MICROSOFT", or null for a local email+password account.

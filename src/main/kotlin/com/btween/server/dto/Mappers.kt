@@ -18,7 +18,8 @@ fun User.toResponse(
     bio = bio,
     followerCount = userRepository.followerCount(id),
     followingCount = userRepository.followingCount(id),
-    isFollowedByMe = viewerId != null && viewerId != id && userRepository.isFollowing(viewerId, id)
+    isFollowedByMe = viewerId != null && viewerId != id && userRepository.isFollowing(viewerId, id),
+    emailVerified = emailVerified
 )
 
 fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean, commentCount: Int = 0): QuoteResponse = QuoteResponse(

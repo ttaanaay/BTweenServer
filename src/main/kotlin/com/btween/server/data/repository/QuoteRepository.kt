@@ -113,6 +113,18 @@ class QuoteRepository {
             .map { it.toQuote() }
     }
 
+    /** Picks a random approved public quote to feature as the "quote of the day" push
+     * notification. Weighted toward liked quotes isn't worth the complexity for this - a
+     * simple random pick from the whole approved/public pool is good enough. */
+    fun getRandomPublicQuote(): Quote? = transaction {
+        Quotes.selectAll()
+            .where { (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED") }
+            .orderBy(Random())
+            .limit(1)
+            .map { it.toQuote() }
+            .singleOrNull()
+    }
+
     /** Public, approved quotes from accounts [userId] follows - the "Following" feed tab. */
     fun getFollowingFeed(userId: Long, limit: Int, offset: Long): List<Quote> = transaction {
         val followedIds = Follows.selectAll()
