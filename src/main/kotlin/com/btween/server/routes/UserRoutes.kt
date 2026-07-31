@@ -140,6 +140,7 @@ private fun Route.userProfileMutationRoutes(userRepository: UserRepository, noti
 
             delete("/me") {
                 val userId = call.requireUserId()
+<<<<<<< HEAD
                 val request = call.receive<DeleteAccountRequest>()
                 val user = userRepository.findById(userId) ?: throw NotFoundException("User not found")
 
@@ -152,6 +153,8 @@ private fun Route.userProfileMutationRoutes(userRepository: UserRepository, noti
                 // nothing to verify against - being authenticated as this user is already
                 // the strongest check available for them.
 
+=======
+>>>>>>> fe4f7e9d2c2a154c775d63dc7c950d4ea9f1a006
                 userRepository.deleteAccount(userId)
                 call.respond(HttpStatusCode.NoContent)
             }

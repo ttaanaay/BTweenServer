@@ -219,6 +219,7 @@ fun Route.authRoutes(
                 }
                 call.respond(HttpStatusCode.OK, MessageResponse("If that email needs verifying, a new code has been sent."))
             }
+<<<<<<< HEAD
 
             authenticate(AUTH_JWT) {
                 post("/change-password") {
@@ -240,6 +241,8 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.OK, MessageResponse("Password changed"))
                 }
             }
+=======
+>>>>>>> fe4f7e9d2c2a154c775d63dc7c950d4ea9f1a006
         }
     }
 }
