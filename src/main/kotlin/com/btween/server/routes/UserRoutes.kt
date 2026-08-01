@@ -91,7 +91,7 @@ private fun Route.userProfileGetRoutes(userRepository: UserRepository, quoteRepo
                         id = quote.id, text = quote.text, sourceTitle = quote.sourceTitle,
                         sourceType = quote.sourceType, speaker = quote.speaker, author = quote.author,
                         category = quote.category, tags = quote.tags, visibility = quote.visibility,
-                        status = quote.status,
+                        status = quote.status, imageUrl = quote.imageUrl,
                         likeCount = quote.likeCount, isLikedByMe = quote.id in likedIds,
                         owner = ownerResponse,
                         createdAt = quote.createdAt.toString(), updatedAt = quote.updatedAt.toString()

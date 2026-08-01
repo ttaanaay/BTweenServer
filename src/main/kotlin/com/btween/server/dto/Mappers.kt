@@ -82,9 +82,10 @@ fun Comment.toResponse(author: UserResponse): CommentResponse = CommentResponse(
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )
 
-fun QuoteCollection.toResponse(quoteCount: Int): CollectionResponse = CollectionResponse(
+fun QuoteCollection.toResponse(quoteCount: Int, coverImageUrl: String? = null): CollectionResponse = CollectionResponse(
     id = id,
     name = name,
     quoteCount = quoteCount,
+    coverImageUrl = coverImageUrl,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )

@@ -17,6 +17,10 @@ data class CollectionResponse(
     val id: Long,
     val name: String,
     val quoteCount: Int,
+    // The most recently added item's attached photo, if it has one - used as the cover
+    // thumbnail in the app's Instagram-Highlights-style collection row. Null if the
+    // collection is empty or none of its quotes have a photo attached.
+    val coverImageUrl: String?,
     val createdAt: String
 )
 
