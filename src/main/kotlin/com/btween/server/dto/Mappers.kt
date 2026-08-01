@@ -52,6 +52,8 @@ fun User.toAdminResponse(userRepository: UserRepository): AdminUserResponse = Ad
     autoApprove = autoApprove,
     followerCount = userRepository.followerCount(id),
     followingCount = userRepository.followingCount(id),
+    emailVerified = emailVerified,
+    isLocked = lockedUntil != null && lockedUntil.isAfter(java.time.Instant.now()),
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )
 
@@ -64,6 +66,7 @@ fun Quote.toAdminResponse(ownerUsername: String): AdminQuoteResponse = AdminQuot
     visibility = visibility,
     status = status,
     likeCount = likeCount,
+    imageUrl = imageUrl,
     ownerId = ownerId,
     ownerUsername = ownerUsername,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)

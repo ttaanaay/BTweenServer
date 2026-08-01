@@ -10,9 +10,11 @@ import com.btween.server.exception.NotFoundException
 import com.btween.server.exception.UnauthorizedException
 import com.btween.server.exception.ValidationException
 import com.btween.server.plugins.AUTH_JWT
+import com.btween.server.plugins.WRITE_RATE_LIMIT
 import com.btween.server.plugins.requireUserId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -44,27 +46,29 @@ fun Route.commentRoutes(
                 })
             }
 
-            post {
-                val userId = call.requireUserId()
-                val quoteId = call.parameters["quoteId"]?.toLongOrNull()
-                    ?: throw ValidationException("Invalid quote id")
-                val request = call.receive<CommentRequest>()
-                val text = request.text.trim()
-                if (text.isEmpty()) throw ValidationException("Comment can't be empty")
-                if (text.length > 1000) throw ValidationException("Comment is too long")
+            rateLimit(WRITE_RATE_LIMIT) {
+                post {
+                    val userId = call.requireUserId()
+                    val quoteId = call.parameters["quoteId"]?.toLongOrNull()
+                        ?: throw ValidationException("Invalid quote id")
+                    val request = call.receive<CommentRequest>()
+                    val text = request.text.trim()
+                    if (text.isEmpty()) throw ValidationException("Comment can't be empty")
+                    if (text.length > 1000) throw ValidationException("Comment is too long")
 
-                val quote = quoteRepository.findById(quoteId) ?: throw NotFoundException("Quote not found")
-                val comment = commentRepository.create(quoteId, userId, text)
+                    val quote = quoteRepository.findById(quoteId) ?: throw NotFoundException("Quote not found")
+                    val comment = commentRepository.create(quoteId, userId, text)
 
-                notificationRepository.create(
-                    recipientUserId = quote.ownerId,
-                    actorUserId = userId,
-                    type = "COMMENT",
-                    quoteId = quoteId
-                )
+                    notificationRepository.create(
+                        recipientUserId = quote.ownerId,
+                        actorUserId = userId,
+                        type = "COMMENT",
+                        quoteId = quoteId
+                    )
 
-                val author = userRepository.findById(userId)!!.toResponse(userRepository, userId)
-                call.respond(HttpStatusCode.Created, comment.toResponse(author))
+                    val author = userRepository.findById(userId)!!.toResponse(userRepository, userId)
+                    call.respond(HttpStatusCode.Created, comment.toResponse(author))
+                }
             }
         }
     }

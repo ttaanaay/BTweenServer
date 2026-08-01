@@ -14,6 +14,8 @@ data class AdminUserResponse(
     val autoApprove: Boolean?,
     val followerCount: Int,
     val followingCount: Int,
+    val emailVerified: Boolean,
+    val isLocked: Boolean,
     val createdAt: String
 )
 
@@ -27,6 +29,7 @@ data class AdminQuoteResponse(
     val visibility: String,
     val status: String,
     val likeCount: Int,
+    val imageUrl: String?,
     val ownerId: Long,
     val ownerUsername: String,
     val createdAt: String

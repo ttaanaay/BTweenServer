@@ -48,7 +48,6 @@ data class VerifyEmailRequest(
 )
 
 @Serializable
-<<<<<<< HEAD
 data class ChangePasswordRequest(
     val currentPassword: String,
     val newPassword: String
@@ -60,8 +59,6 @@ data class DeleteAccountRequest(
 )
 
 @Serializable
-=======
->>>>>>> fe4f7e9d2c2a154c775d63dc7c950d4ea9f1a006
 data class ResendVerificationRequest(
     val email: String
 )

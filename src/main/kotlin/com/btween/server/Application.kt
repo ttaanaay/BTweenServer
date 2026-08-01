@@ -10,6 +10,7 @@ import com.btween.server.data.repository.EmailVerificationRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.QuoteRepository
+import com.btween.server.data.repository.RefreshTokenRepository
 import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.email.ConsoleEmailSender
@@ -63,6 +64,7 @@ fun Application.module(config: AppConfig) {
     val commentRepository = CommentRepository()
     val collectionRepository = CollectionRepository()
     val reportRepository = ReportRepository()
+    val refreshTokenRepository = RefreshTokenRepository()
     val passwordResetRepository = PasswordResetRepository()
     val emailVerificationRepository = EmailVerificationRepository()
     val deviceTokenRepository = DeviceTokenRepository()
@@ -119,7 +121,9 @@ fun Application.module(config: AppConfig) {
             microsoftVerifier,
             passwordResetRepository,
             emailVerificationRepository,
-            emailSender
+            refreshTokenRepository,
+            emailSender,
+            config
         )
 
         rateLimit(API_RATE_LIMIT) {

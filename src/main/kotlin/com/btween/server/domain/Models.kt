@@ -13,6 +13,8 @@ data class User(
     val isAdmin: Boolean,
     val isBanned: Boolean,
     val emailVerified: Boolean,
+    val failedLoginAttempts: Int,
+    val lockedUntil: Instant?,
     val autoApprove: Boolean?,
     val authProvider: String?,
     val providerUserId: String?,

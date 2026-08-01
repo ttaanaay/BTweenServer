@@ -1,7 +1,10 @@
 package com.btween.server.routes
 
+import com.btween.server.config.AppConfig
 import com.btween.server.data.repository.EmailVerificationRepository
 import com.btween.server.data.repository.PasswordResetRepository
+import com.btween.server.data.repository.RefreshTokenRepository
+import com.btween.server.data.repository.RefreshTokenStatus
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AuthResponse
@@ -50,7 +53,9 @@ fun Route.authRoutes(
     microsoftVerifier: MicrosoftTokenVerifier,
     passwordResetRepository: PasswordResetRepository,
     emailVerificationRepository: EmailVerificationRepository,
-    emailSender: EmailSender
+    refreshTokenRepository: RefreshTokenRepository,
+    emailSender: EmailSender,
+    config: AppConfig
 ) {
     route("/auth") {
         rateLimit(AUTH_RATE_LIMIT) {
@@ -91,7 +96,7 @@ fun Route.authRoutes(
                     body = "Your verification code is: $code\nIt expires in 15 minutes."
                 )
 
-                call.respond(HttpStatusCode.Created, buildAuthResponse(user, jwtService, userRepository))
+                call.respond(HttpStatusCode.Created, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/login") {
@@ -99,32 +104,65 @@ fun Route.authRoutes(
                 val user = userRepository.findByEmail(request.email)
                     ?: throw UnauthorizedException("Incorrect email or password")
 
+                val lockedUntil = user.lockedUntil
+                if (lockedUntil != null && lockedUntil.isAfter(java.time.Instant.now())) {
+                    throw UnauthorizedException("Too many failed attempts - try again later")
+                }
+
                 if (user.passwordHash == null) {
                     throw UnauthorizedException(
                         "This account signs in with ${user.authProvider?.lowercase() ?: "a social account"} - use that instead"
                     )
                 }
                 if (!PasswordHasher.verify(request.password, user.passwordHash)) {
+                    userRepository.recordFailedLogin(user.id)
                     throw UnauthorizedException("Incorrect email or password")
                 }
                 if (user.isBanned) {
                     throw UnauthorizedException("This account has been suspended")
                 }
 
-                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+                userRepository.resetFailedLogins(user.id)
+                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/refresh") {
                 val request = call.receive<RefreshRequest>()
                 val userId = jwtService.verifyRefreshToken(request.refreshToken)
                     ?: throw UnauthorizedException("Refresh token is invalid or expired")
+
+                when (refreshTokenRepository.checkStatus(request.refreshToken)) {
+                    RefreshTokenStatus.REVOKED -> {
+                        // This exact token was already rotated away or logged out - being
+                        // presented again is a strong signal it was copied/stolen, so kill
+                        // every active session for this account as a precaution.
+                        refreshTokenRepository.revokeAllForUser(userId)
+                        throw UnauthorizedException("This session has been revoked - please log in again")
+                    }
+                    RefreshTokenStatus.EXPIRED -> throw UnauthorizedException("Refresh token is invalid or expired")
+                    RefreshTokenStatus.UNKNOWN -> throw UnauthorizedException("Refresh token is invalid or expired")
+                    RefreshTokenStatus.VALID -> { /* proceed */ }
+                }
+
                 val user = userRepository.findById(userId)
                     ?: throw UnauthorizedException("Account no longer exists")
                 if (user.isBanned) {
                     throw UnauthorizedException("This account has been suspended")
                 }
 
-                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+                // Rotation: the old refresh token is single-use - revoke it now that a new
+                // one is about to be issued in its place.
+                refreshTokenRepository.revoke(request.refreshToken)
+                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
+            }
+
+            post("/logout") {
+                val request = call.receive<RefreshRequest>()
+                // No need to verify the token is still valid/unexpired first - revoking an
+                // already-expired or already-revoked token is a harmless no-op either way,
+                // and this endpoint only accepts a token the caller already possesses.
+                refreshTokenRepository.revoke(request.refreshToken)
+                call.respond(HttpStatusCode.OK, MessageResponse("Logged out"))
             }
 
             post("/oauth/google") {
@@ -135,7 +173,7 @@ fun Route.authRoutes(
                     ?: throw UnauthorizedException("Invalid Google token")
                 val user = findOrCreateOAuthUser(userRepository, "GOOGLE", profile)
                 if (user.isBanned) throw UnauthorizedException("This account has been suspended")
-                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/oauth/facebook") {
@@ -144,7 +182,7 @@ fun Route.authRoutes(
                     ?: throw UnauthorizedException("Invalid Facebook token")
                 val user = findOrCreateOAuthUser(userRepository, "FACEBOOK", profile)
                 if (user.isBanned) throw UnauthorizedException("This account has been suspended")
-                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/oauth/microsoft") {
@@ -153,7 +191,7 @@ fun Route.authRoutes(
                     ?: throw UnauthorizedException("Invalid Microsoft token")
                 val user = findOrCreateOAuthUser(userRepository, "MICROSOFT", profile)
                 if (user.isBanned) throw UnauthorizedException("This account has been suspended")
-                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository))
+                call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/forgot-password") {
@@ -219,7 +257,6 @@ fun Route.authRoutes(
                 }
                 call.respond(HttpStatusCode.OK, MessageResponse("If that email needs verifying, a new code has been sent."))
             }
-<<<<<<< HEAD
 
             authenticate(AUTH_JWT) {
                 post("/change-password") {
@@ -241,15 +278,24 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.OK, MessageResponse("Password changed"))
                 }
             }
-=======
->>>>>>> fe4f7e9d2c2a154c775d63dc7c950d4ea9f1a006
         }
     }
 }
 
-private fun buildAuthResponse(user: User, jwtService: JwtService, userRepository: UserRepository): AuthResponse {
+private fun buildAuthResponse(
+    user: User,
+    jwtService: JwtService,
+    userRepository: UserRepository,
+    refreshTokenRepository: RefreshTokenRepository,
+    config: AppConfig
+): AuthResponse {
     val accessToken = jwtService.generateAccessToken(user.id)
     val refreshToken = jwtService.generateRefreshToken(user.id)
+    refreshTokenRepository.store(
+        userId = user.id,
+        rawToken = refreshToken,
+        expiresAt = java.time.Instant.now().plusSeconds(config.jwtRefreshTokenExpiryDays * 86_400L)
+    )
     return AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
 }
 

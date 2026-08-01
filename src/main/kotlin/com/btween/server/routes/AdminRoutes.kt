@@ -92,6 +92,15 @@ fun Route.adminRoutes(
                 call.respond(updated.toAdminResponse(userRepository))
             }
 
+            post("/users/{id}/unlock") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                userRepository.findById(id) ?: throw NotFoundException("User not found")
+                userRepository.resetFailedLogins(id)
+                val updated = userRepository.findById(id)!!
+                call.respond(updated.toAdminResponse(userRepository))
+            }
+
             get("/quotes/pending") {
                 call.requireAdmin(userRepository)
                 val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50

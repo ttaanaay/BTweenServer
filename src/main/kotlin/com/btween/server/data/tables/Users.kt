@@ -19,6 +19,11 @@ object Users : Table("users") {
     // Google/Facebook/Microsoft start out true; local email+password accounts start false
     // and flip to true once the user enters their emailed verification code.
     val emailVerified = bool("email_verified").default(false)
+    // Brute-force protection: incremented on each failed login, reset to 0 on success.
+    // Once it hits the threshold (see AuthRoutes.kt), lockedUntil is set and login is
+    // refused - even with correct credentials - until that time passes.
+    val failedLoginAttempts = integer("failed_login_attempts").default(0)
+    val lockedUntil = timestamp("locked_until").nullable()
     // null = "use the global default setting"; true/false = explicit per-user override set by an admin.
     val autoApprove = bool("auto_approve").nullable()
     // "GOOGLE" / "FACEBOOK" / "MICROSOFT", or null for a local email+password account.
