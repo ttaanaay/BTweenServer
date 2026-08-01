@@ -261,6 +261,45 @@ fun Route.adminRoutes(
                 reportRepository.updateStatus(id, "DISMISSED")
                 call.respond(HttpStatusCode.NoContent)
             }
+
+            /** Deletes the quote or comment a report points at, then marks the report
+             * resolved. Doesn't apply to USER reports - removing an entire account is a
+             * bigger action, handled deliberately through the Users page instead. */
+            post("/reports/{id}/delete-content") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                val report = reportRepository.findById(id) ?: throw NotFoundException("Report not found")
+
+                when (report.targetType) {
+                    "QUOTE" -> quoteRepository.adminDelete(report.targetId)
+                    "COMMENT" -> commentRepository.adminDelete(report.targetId)
+                    else -> throw ValidationException("Can't delete content for a ${report.targetType} report")
+                }
+                reportRepository.updateStatus(id, "RESOLVED")
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            /** Bans whichever account is responsible for the reported content - the user
+             * directly, the quote's owner, or the comment's author - then marks the report
+             * resolved. */
+            post("/reports/{id}/ban-target") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                val report = reportRepository.findById(id) ?: throw NotFoundException("Report not found")
+
+                val targetUserId = when (report.targetType) {
+                    "USER" -> report.targetId
+                    "QUOTE" -> quoteRepository.findById(report.targetId)?.ownerId
+                        ?: throw NotFoundException("Quote no longer exists")
+                    "COMMENT" -> commentRepository.findById(report.targetId)?.userId
+                        ?: throw NotFoundException("Comment no longer exists")
+                    else -> throw ValidationException("Unknown report target type")
+                }
+
+                userRepository.setBanned(targetUserId, true)
+                reportRepository.updateStatus(id, "RESOLVED")
+                call.respond(HttpStatusCode.NoContent)
+            }
         }
     }
 }

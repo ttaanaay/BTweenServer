@@ -12,7 +12,10 @@ data class UserResponse(
     val followerCount: Int = 0,
     val followingCount: Int = 0,
     val isFollowedByMe: Boolean = false,
-    val emailVerified: Boolean = true
+    val emailVerified: Boolean = true,
+    // null = signed up with email/password and has a password to confirm with; non-null
+    // (e.g. "GOOGLE") = signed in via a provider and has no password at all.
+    val authProvider: String? = null
 )
 
 @Serializable
