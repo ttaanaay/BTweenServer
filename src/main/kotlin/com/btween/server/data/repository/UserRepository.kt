@@ -149,6 +149,11 @@ class UserRepository {
         findById(id)
     }
 
+    fun setAdmin(id: Long, isAdmin: Boolean): User? = transaction {
+        Users.update({ Users.id eq id }) { it[Users.isAdmin] = isAdmin }
+        findById(id)
+    }
+
     fun setAutoApprove(id: Long, autoApprove: Boolean?): User? = transaction {
         Users.update({ Users.id eq id }) { it[Users.autoApprove] = autoApprove }
         findById(id)

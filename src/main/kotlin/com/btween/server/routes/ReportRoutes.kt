@@ -15,7 +15,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
-private val VALID_TARGET_TYPES = setOf("QUOTE", "USER")
+private val VALID_TARGET_TYPES = setOf("QUOTE", "USER", "COMMENT")
 private val VALID_REASONS = setOf("SPAM", "HARASSMENT", "INAPPROPRIATE", "MISINFORMATION", "OTHER")
 
 fun Route.reportRoutes(reportRepository: ReportRepository) {

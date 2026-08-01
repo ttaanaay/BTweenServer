@@ -19,5 +19,9 @@ data class ReportResponse(
     val details: String?,
     val status: String,
     val reporterUsername: String,
+    // A short preview of the actual reported content, so an admin doesn't have to go dig it
+    // up separately - the quote text, the comment text, or the reported user's @handle.
+    // Null if the content was deleted since the report was filed.
+    val targetPreview: String?,
     val createdAt: String
 )

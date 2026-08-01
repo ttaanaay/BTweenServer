@@ -1,14 +1,21 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
+import com.btween.server.dto.AdminCommentResponse
 import com.btween.server.dto.AdminStatsResponse
+import com.btween.server.dto.AdminUserDetailResponse
+import com.btween.server.dto.AnalyticsPoint
+import com.btween.server.dto.AnalyticsResponse
 import com.btween.server.dto.AppSettingsResponse
 import com.btween.server.dto.ReportResponse
+import com.btween.server.dto.SetAdminStatusRequest
 import com.btween.server.dto.SetAutoApproveRequest
 import com.btween.server.dto.SetBannedRequest
 import com.btween.server.dto.UpdateAppSettingsRequest
@@ -48,7 +55,9 @@ fun Route.adminRoutes(
     quoteRepository: QuoteRepository,
     appSettingsRepository: AppSettingsRepository,
     notificationRepository: NotificationRepository,
-    reportRepository: ReportRepository
+    reportRepository: ReportRepository,
+    commentRepository: CommentRepository,
+    analyticsRepository: AnalyticsRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -99,6 +108,61 @@ fun Route.adminRoutes(
                 userRepository.resetFailedLogins(id)
                 val updated = userRepository.findById(id)!!
                 call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            put("/users/{id}/admin-status") {
+                val admin = call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                if (id == admin.id) {
+                    throw ValidationException("You can't change your own admin status")
+                }
+                val request = call.receive<SetAdminStatusRequest>()
+                val updated = userRepository.setAdmin(id, request.isAdmin)
+                    ?: throw NotFoundException("User not found")
+                call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            get("/users/{id}/detail") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                val user = userRepository.findById(id) ?: throw NotFoundException("User not found")
+
+                val quotes = quoteRepository.getUserQuotes(id, includePrivate = true, limit = 20, offset = 0)
+                val comments = commentRepository.getForUser(id, limit = 20, offset = 0)
+
+                call.respond(
+                    AdminUserDetailResponse(
+                        user = user.toAdminResponse(userRepository),
+                        recentQuotes = quotes.map { it.toAdminResponse(user.username) },
+                        recentComments = comments.map {
+                            AdminCommentResponse(
+                                id = it.id,
+                                quoteId = it.quoteId,
+                                text = it.text,
+                                createdAt = DateTimeFormatter.ISO_INSTANT.format(it.createdAt)
+                            )
+                        }
+                    )
+                )
+            }
+
+            get("/analytics") {
+                call.requireAdmin(userRepository)
+                val days = call.parameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 30
+                val counts = analyticsRepository.getDailyCounts(days)
+                call.respond(
+                    AnalyticsResponse(
+                        points = counts.map {
+                            AnalyticsPoint(
+                                date = it.date.toString(),
+                                newUsers = it.newUsers,
+                                newQuotes = it.newQuotes,
+                                newLikes = it.newLikes,
+                                newComments = it.newComments
+                            )
+                        }
+                    )
+                )
             }
 
             get("/quotes/pending") {
@@ -164,6 +228,12 @@ fun Route.adminRoutes(
                 val reports = reportRepository.getByStatus(status, limit, offset)
                 call.respond(reports.map { report ->
                     val reporter = userRepository.findById(report.reporterId)
+                    val preview = when (report.targetType) {
+                        "QUOTE" -> quoteRepository.findById(report.targetId)?.text?.take(140)
+                        "COMMENT" -> commentRepository.findById(report.targetId)?.text?.take(140)
+                        "USER" -> userRepository.findById(report.targetId)?.let { "@${it.username}" }
+                        else -> null
+                    }
                     ReportResponse(
                         id = report.id,
                         targetType = report.targetType,
@@ -172,6 +242,7 @@ fun Route.adminRoutes(
                         details = report.details,
                         status = report.status,
                         reporterUsername = reporter?.username ?: "unknown",
+                        targetPreview = preview,
                         createdAt = DateTimeFormatter.ISO_INSTANT.format(report.createdAt)
                     )
                 })

@@ -51,6 +51,15 @@ class CommentRepository {
             .map { it.toComment() }
     }
 
+    /** Admin drill-down: a user's own comments, most recent first. */
+    fun getForUser(userId: Long, limit: Int, offset: Long): List<Comment> = transaction {
+        Comments.selectAll()
+            .where { Comments.userId eq userId }
+            .orderBy(Comments.createdAt, SortOrder.DESC)
+            .limit(limit, offset)
+            .map { it.toComment() }
+    }
+
     fun countForQuote(quoteId: Long): Long = transaction {
         Comments.selectAll().where { Comments.quoteId eq quoteId }.count()
     }
