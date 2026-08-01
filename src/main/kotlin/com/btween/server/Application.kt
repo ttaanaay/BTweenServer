@@ -4,6 +4,7 @@ import com.btween.server.config.AppConfig
 import com.btween.server.config.DatabaseFactory
 import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.CategoryRepository
 import com.btween.server.data.repository.CollectionRepository
 import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.DeviceTokenRepository
@@ -24,6 +25,7 @@ import com.btween.server.plugins.configureStatusPages
 import com.btween.server.push.PushNotificationService
 import com.btween.server.routes.adminRoutes
 import com.btween.server.routes.authRoutes
+import com.btween.server.routes.categoryRoutes
 import com.btween.server.routes.collectionRoutes
 import com.btween.server.routes.commentRoutes
 import com.btween.server.routes.cronRoutes
@@ -66,6 +68,8 @@ fun Application.module(config: AppConfig) {
     val collectionRepository = CollectionRepository()
     val reportRepository = ReportRepository()
     val analyticsRepository = AnalyticsRepository()
+    val categoryRepository = CategoryRepository()
+    categoryRepository.seedDefaultsIfEmpty()
     val refreshTokenRepository = RefreshTokenRepository()
     val passwordResetRepository = PasswordResetRepository()
     val emailVerificationRepository = EmailVerificationRepository()
@@ -131,7 +135,8 @@ fun Application.module(config: AppConfig) {
         rateLimit(API_RATE_LIMIT) {
             userRoutes(userRepository, quoteRepository, notificationRepository)
             quoteRoutes(quoteRepository, userRepository, appSettingsRepository, notificationRepository, commentRepository)
-            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository, commentRepository, analyticsRepository)
+            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository, commentRepository, analyticsRepository, categoryRepository)
+            categoryRoutes(categoryRepository)
             notificationRoutes(notificationRepository, userRepository, quoteRepository)
             commentRoutes(commentRepository, quoteRepository, userRepository, notificationRepository)
             collectionRoutes(collectionRepository, quoteRepository, userRepository)

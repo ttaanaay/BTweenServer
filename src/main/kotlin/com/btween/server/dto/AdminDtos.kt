@@ -42,6 +42,9 @@ data class SetBannedRequest(val banned: Boolean)
 data class SetAdminStatusRequest(val isAdmin: Boolean)
 
 @Serializable
+data class CreateCategoryRequest(val name: String)
+
+@Serializable
 data class SetAutoApproveRequest(val autoApprove: Boolean?)
 
 @Serializable

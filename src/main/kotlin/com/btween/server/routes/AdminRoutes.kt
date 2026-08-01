@@ -2,6 +2,7 @@ package com.btween.server.routes
 
 import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.CategoryRepository
 import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
@@ -14,6 +15,7 @@ import com.btween.server.dto.AdminUserDetailResponse
 import com.btween.server.dto.AnalyticsPoint
 import com.btween.server.dto.AnalyticsResponse
 import com.btween.server.dto.AppSettingsResponse
+import com.btween.server.dto.CreateCategoryRequest
 import com.btween.server.dto.ReportResponse
 import com.btween.server.dto.SetAdminStatusRequest
 import com.btween.server.dto.SetAutoApproveRequest
@@ -57,7 +59,8 @@ fun Route.adminRoutes(
     notificationRepository: NotificationRepository,
     reportRepository: ReportRepository,
     commentRepository: CommentRepository,
-    analyticsRepository: AnalyticsRepository
+    analyticsRepository: AnalyticsRepository,
+    categoryRepository: CategoryRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -163,6 +166,34 @@ fun Route.adminRoutes(
                         }
                     )
                 )
+            }
+
+            get("/categories") {
+                call.requireAdmin(userRepository)
+                call.respond(categoryRepository.getAll().map { CategoryResponse(it.id, it.name) })
+            }
+
+            post("/categories") {
+                call.requireAdmin(userRepository)
+                val request = call.receive<CreateCategoryRequest>()
+                val name = request.name.trim()
+                if (name.isEmpty() || name.length > 60) {
+                    throw ValidationException("Category name must be 1-60 characters")
+                }
+                val category = try {
+                    categoryRepository.create(name)
+                } catch (e: Exception) {
+                    throw ValidationException("A category with that name already exists")
+                }
+                call.respond(HttpStatusCode.Created, CategoryResponse(category.id, category.name))
+            }
+
+            delete("/categories/{id}") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid category id")
+                val deleted = categoryRepository.delete(id)
+                if (!deleted) throw NotFoundException("Category not found")
+                call.respond(HttpStatusCode.NoContent)
             }
 
             get("/quotes/pending") {
