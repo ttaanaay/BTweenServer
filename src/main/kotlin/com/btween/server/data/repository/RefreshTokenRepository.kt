@@ -45,7 +45,7 @@ class RefreshTokenRepository {
      * strong signal the token was stolen and used by someone other than its rightful owner. */
     fun revokeAllForUser(userId: Long) = transaction {
         RefreshTokens.update({
-            with(SqlExpressionBuilder) { (RefreshTokens.userId eq userId) and (revokedAt.isNull()) }
+            with(SqlExpressionBuilder) { (RefreshTokens.userId eq userId) and (RefreshTokens.revokedAt.isNull()) }
         }) {
             it[revokedAt] = Instant.now()
         }
