@@ -19,7 +19,8 @@ fun User.toResponse(
     followerCount = userRepository.followerCount(id),
     followingCount = userRepository.followingCount(id),
     isFollowedByMe = viewerId != null && viewerId != id && userRepository.isFollowing(viewerId, id),
-    emailVerified = emailVerified
+    emailVerified = emailVerified,
+    authProvider = authProvider
 )
 
 fun Quote.toResponse(owner: UserResponse, isLikedByMe: Boolean, commentCount: Int = 0): QuoteResponse = QuoteResponse(
@@ -52,6 +53,8 @@ fun User.toAdminResponse(userRepository: UserRepository): AdminUserResponse = Ad
     autoApprove = autoApprove,
     followerCount = userRepository.followerCount(id),
     followingCount = userRepository.followingCount(id),
+    emailVerified = emailVerified,
+    isLocked = lockedUntil != null && lockedUntil.isAfter(java.time.Instant.now()),
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )
 
@@ -64,6 +67,7 @@ fun Quote.toAdminResponse(ownerUsername: String): AdminQuoteResponse = AdminQuot
     visibility = visibility,
     status = status,
     likeCount = likeCount,
+    imageUrl = imageUrl,
     ownerId = ownerId,
     ownerUsername = ownerUsername,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
@@ -78,9 +82,10 @@ fun Comment.toResponse(author: UserResponse): CommentResponse = CommentResponse(
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )
 
-fun QuoteCollection.toResponse(quoteCount: Int): CollectionResponse = CollectionResponse(
+fun QuoteCollection.toResponse(quoteCount: Int, coverImageUrl: String? = null): CollectionResponse = CollectionResponse(
     id = id,
     name = name,
     quoteCount = quoteCount,
+    coverImageUrl = coverImageUrl,
     createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt)
 )

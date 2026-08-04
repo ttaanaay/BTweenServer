@@ -48,6 +48,10 @@ class ReportRepository {
         Reports.selectAll().where { Reports.status eq "PENDING" }.count()
     }
 
+    fun findById(id: Long): Report? = transaction {
+        Reports.selectAll().where { Reports.id eq id }.map { it.toReport() }.singleOrNull()
+    }
+
     fun updateStatus(id: Long, status: String): Boolean = transaction {
         Reports.update({ Reports.id eq id }) { it[Reports.status] = status } > 0
     }

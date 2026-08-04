@@ -14,6 +14,8 @@ data class AdminUserResponse(
     val autoApprove: Boolean?,
     val followerCount: Int,
     val followingCount: Int,
+    val emailVerified: Boolean,
+    val isLocked: Boolean,
     val createdAt: String
 )
 
@@ -27,6 +29,7 @@ data class AdminQuoteResponse(
     val visibility: String,
     val status: String,
     val likeCount: Int,
+    val imageUrl: String?,
     val ownerId: Long,
     val ownerUsername: String,
     val createdAt: String
@@ -34,6 +37,12 @@ data class AdminQuoteResponse(
 
 @Serializable
 data class SetBannedRequest(val banned: Boolean)
+
+@Serializable
+data class SetAdminStatusRequest(val isAdmin: Boolean)
+
+@Serializable
+data class CreateCategoryRequest(val name: String)
 
 @Serializable
 data class SetAutoApproveRequest(val autoApprove: Boolean?)
@@ -51,4 +60,33 @@ data class AdminStatsResponse(
     val pendingQuotes: Long,
     val approvedQuotes: Long,
     val rejectedQuotes: Long
+)
+
+@Serializable
+data class AdminCommentResponse(
+    val id: Long,
+    val quoteId: Long,
+    val text: String,
+    val createdAt: String
+)
+
+@Serializable
+data class AdminUserDetailResponse(
+    val user: AdminUserResponse,
+    val recentQuotes: List<AdminQuoteResponse>,
+    val recentComments: List<AdminCommentResponse>
+)
+
+@Serializable
+data class AnalyticsPoint(
+    val date: String,
+    val newUsers: Int,
+    val newQuotes: Int,
+    val newLikes: Int,
+    val newComments: Int
+)
+
+@Serializable
+data class AnalyticsResponse(
+    val points: List<AnalyticsPoint>
 )

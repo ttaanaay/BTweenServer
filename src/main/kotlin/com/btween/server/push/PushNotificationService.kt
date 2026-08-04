@@ -7,7 +7,6 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
-import com.google.firebase.messaging.Notification
 import java.io.ByteArrayInputStream
 
 class PushNotificationService(serviceAccountJson: String) {
@@ -28,18 +27,22 @@ class PushNotificationService(serviceAccountJson: String) {
      * transparently so callers don't need to think about that. Returns the tokens that
      * turned out to be invalid (app uninstalled, notifications disabled at the OS level,
      * etc) so the caller can clean them out of the database.
+     *
+     * Deliberately sent as a data-only message (no .setNotification(...)) rather than a
+     * notification message. Notification messages get displayed automatically by Android
+     * itself whenever the app isn't in the foreground - bypassing the app's own code
+     * entirely, which for us meant a stale/duplicate quote could linger on screen instead
+     * of showing this send's actual text. Data messages always route through the app's own
+     * onMessageReceived(), in every app state, so the notification shown always matches
+     * what was just sent.
      */
     fun sendToTokens(tokens: List<String>, title: String, body: String): List<String> {
         val invalidTokens = mutableListOf<String>()
 
         tokens.chunked(500).forEach { batch ->
             val message = MulticastMessage.builder()
-                .setNotification(
-                    Notification.builder()
-                        .setTitle(title)
-                        .setBody(body)
-                        .build()
-                )
+                .putData("title", title)
+                .putData("body", body)
                 .addAllTokens(batch)
                 .build()
 

@@ -1,0 +1,20 @@
+package com.btween.server.routes
+
+import com.btween.server.data.repository.CategoryRepository
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.route
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class CategoryResponse(val id: Long, val name: String)
+
+fun Route.categoryRoutes(categoryRepository: CategoryRepository) {
+    route("/categories") {
+        get {
+            val categories = categoryRepository.getAll()
+            call.respond(categories.map { CategoryResponse(it.id, it.name) })
+        }
+    }
+}

@@ -1,14 +1,23 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
+import com.btween.server.data.repository.CategoryRepository
+import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
+import com.btween.server.dto.AdminCommentResponse
 import com.btween.server.dto.AdminStatsResponse
+import com.btween.server.dto.AdminUserDetailResponse
+import com.btween.server.dto.AnalyticsPoint
+import com.btween.server.dto.AnalyticsResponse
 import com.btween.server.dto.AppSettingsResponse
+import com.btween.server.dto.CreateCategoryRequest
 import com.btween.server.dto.ReportResponse
+import com.btween.server.dto.SetAdminStatusRequest
 import com.btween.server.dto.SetAutoApproveRequest
 import com.btween.server.dto.SetBannedRequest
 import com.btween.server.dto.UpdateAppSettingsRequest
@@ -48,7 +57,10 @@ fun Route.adminRoutes(
     quoteRepository: QuoteRepository,
     appSettingsRepository: AppSettingsRepository,
     notificationRepository: NotificationRepository,
-    reportRepository: ReportRepository
+    reportRepository: ReportRepository,
+    commentRepository: CommentRepository,
+    analyticsRepository: AnalyticsRepository,
+    categoryRepository: CategoryRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -90,6 +102,98 @@ fun Route.adminRoutes(
                 val updated = userRepository.setAutoApprove(id, request.autoApprove)
                     ?: throw NotFoundException("User not found")
                 call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            post("/users/{id}/unlock") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                userRepository.findById(id) ?: throw NotFoundException("User not found")
+                userRepository.resetFailedLogins(id)
+                val updated = userRepository.findById(id)!!
+                call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            put("/users/{id}/admin-status") {
+                val admin = call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                if (id == admin.id) {
+                    throw ValidationException("You can't change your own admin status")
+                }
+                val request = call.receive<SetAdminStatusRequest>()
+                val updated = userRepository.setAdmin(id, request.isAdmin)
+                    ?: throw NotFoundException("User not found")
+                call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            get("/users/{id}/detail") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                val user = userRepository.findById(id) ?: throw NotFoundException("User not found")
+
+                val quotes = quoteRepository.getUserQuotes(id, includePrivate = true, limit = 20, offset = 0)
+                val comments = commentRepository.getForUser(id, limit = 20, offset = 0)
+
+                call.respond(
+                    AdminUserDetailResponse(
+                        user = user.toAdminResponse(userRepository),
+                        recentQuotes = quotes.map { it.toAdminResponse(user.username) },
+                        recentComments = comments.map {
+                            AdminCommentResponse(
+                                id = it.id,
+                                quoteId = it.quoteId,
+                                text = it.text,
+                                createdAt = DateTimeFormatter.ISO_INSTANT.format(it.createdAt)
+                            )
+                        }
+                    )
+                )
+            }
+
+            get("/analytics") {
+                call.requireAdmin(userRepository)
+                val days = call.parameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 30
+                val counts = analyticsRepository.getDailyCounts(days)
+                call.respond(
+                    AnalyticsResponse(
+                        points = counts.map {
+                            AnalyticsPoint(
+                                date = it.date.toString(),
+                                newUsers = it.newUsers,
+                                newQuotes = it.newQuotes,
+                                newLikes = it.newLikes,
+                                newComments = it.newComments
+                            )
+                        }
+                    )
+                )
+            }
+
+            get("/categories") {
+                call.requireAdmin(userRepository)
+                call.respond(categoryRepository.getAll().map { CategoryResponse(it.id, it.name) })
+            }
+
+            post("/categories") {
+                call.requireAdmin(userRepository)
+                val request = call.receive<CreateCategoryRequest>()
+                val name = request.name.trim()
+                if (name.isEmpty() || name.length > 60) {
+                    throw ValidationException("Category name must be 1-60 characters")
+                }
+                val category = try {
+                    categoryRepository.create(name)
+                } catch (e: Exception) {
+                    throw ValidationException("A category with that name already exists")
+                }
+                call.respond(HttpStatusCode.Created, CategoryResponse(category.id, category.name))
+            }
+
+            delete("/categories/{id}") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid category id")
+                val deleted = categoryRepository.delete(id)
+                if (!deleted) throw NotFoundException("Category not found")
+                call.respond(HttpStatusCode.NoContent)
             }
 
             get("/quotes/pending") {
@@ -155,6 +259,12 @@ fun Route.adminRoutes(
                 val reports = reportRepository.getByStatus(status, limit, offset)
                 call.respond(reports.map { report ->
                     val reporter = userRepository.findById(report.reporterId)
+                    val preview = when (report.targetType) {
+                        "QUOTE" -> quoteRepository.findById(report.targetId)?.text?.take(140)
+                        "COMMENT" -> commentRepository.findById(report.targetId)?.text?.take(140)
+                        "USER" -> userRepository.findById(report.targetId)?.let { "@${it.username}" }
+                        else -> null
+                    }
                     ReportResponse(
                         id = report.id,
                         targetType = report.targetType,
@@ -163,6 +273,7 @@ fun Route.adminRoutes(
                         details = report.details,
                         status = report.status,
                         reporterUsername = reporter?.username ?: "unknown",
+                        targetPreview = preview,
                         createdAt = DateTimeFormatter.ISO_INSTANT.format(report.createdAt)
                     )
                 })
@@ -179,6 +290,45 @@ fun Route.adminRoutes(
                 call.requireAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
                 reportRepository.updateStatus(id, "DISMISSED")
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            /** Deletes the quote or comment a report points at, then marks the report
+             * resolved. Doesn't apply to USER reports - removing an entire account is a
+             * bigger action, handled deliberately through the Users page instead. */
+            post("/reports/{id}/delete-content") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                val report = reportRepository.findById(id) ?: throw NotFoundException("Report not found")
+
+                when (report.targetType) {
+                    "QUOTE" -> quoteRepository.adminDelete(report.targetId)
+                    "COMMENT" -> commentRepository.adminDelete(report.targetId)
+                    else -> throw ValidationException("Can't delete content for a ${report.targetType} report")
+                }
+                reportRepository.updateStatus(id, "RESOLVED")
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            /** Bans whichever account is responsible for the reported content - the user
+             * directly, the quote's owner, or the comment's author - then marks the report
+             * resolved. */
+            post("/reports/{id}/ban-target") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid report id")
+                val report = reportRepository.findById(id) ?: throw NotFoundException("Report not found")
+
+                val targetUserId = when (report.targetType) {
+                    "USER" -> report.targetId
+                    "QUOTE" -> quoteRepository.findById(report.targetId)?.ownerId
+                        ?: throw NotFoundException("Quote no longer exists")
+                    "COMMENT" -> commentRepository.findById(report.targetId)?.userId
+                        ?: throw NotFoundException("Comment no longer exists")
+                    else -> throw ValidationException("Unknown report target type")
+                }
+
+                userRepository.setBanned(targetUserId, true)
+                reportRepository.updateStatus(id, "RESOLVED")
                 call.respond(HttpStatusCode.NoContent)
             }
         }

@@ -34,7 +34,11 @@ fun Route.collectionRoutes(
             get {
                 val userId = call.requireUserId()
                 val collections = collectionRepository.getForUser(userId)
-                call.respond(collections.map { it.toResponse(collectionRepository.countItems(it.id).toInt()) })
+                call.respond(collections.map { collection ->
+                    val quoteIds = collectionRepository.getQuoteIds(collection.id)
+                    val coverImageUrl = quoteIds.firstNotNullOfOrNull { quoteRepository.findById(it)?.imageUrl }
+                    collection.toResponse(quoteIds.size, coverImageUrl)
+                })
             }
 
             post {

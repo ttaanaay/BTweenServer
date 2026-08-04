@@ -13,6 +13,7 @@ import com.btween.server.domain.User
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class UserRepository {
 
@@ -27,6 +28,8 @@ class UserRepository {
         isAdmin = this[Users.isAdmin],
         isBanned = this[Users.isBanned],
         emailVerified = this[Users.emailVerified],
+        failedLoginAttempts = this[Users.failedLoginAttempts],
+        lockedUntil = this[Users.lockedUntil],
         autoApprove = this[Users.autoApprove],
         authProvider = this[Users.authProvider],
         providerUserId = this[Users.providerUserId],
@@ -146,6 +149,11 @@ class UserRepository {
         findById(id)
     }
 
+    fun setAdmin(id: Long, isAdmin: Boolean): User? = transaction {
+        Users.update({ Users.id eq id }) { it[Users.isAdmin] = isAdmin }
+        findById(id)
+    }
+
     fun setAutoApprove(id: Long, autoApprove: Boolean?): User? = transaction {
         Users.update({ Users.id eq id }) { it[Users.autoApprove] = autoApprove }
         findById(id)
@@ -159,6 +167,32 @@ class UserRepository {
 
     fun markEmailVerified(userId: Long): Boolean = transaction {
         Users.update({ Users.id eq userId }) { it[Users.emailVerified] = true } > 0
+    }
+
+    private val MAX_FAILED_ATTEMPTS = 5
+    private val LOCKOUT_MINUTES = 15L
+
+    /** Call after a failed login. Locks the account once the threshold is hit. */
+    fun recordFailedLogin(userId: Long): Unit = transaction {
+        val current = Users.selectAll().where { Users.id eq userId }
+            .map { it[Users.failedLoginAttempts] }
+            .singleOrNull() ?: return@transaction
+        val newCount = current + 1
+
+        Users.update({ Users.id eq userId }) {
+            it[failedLoginAttempts] = newCount
+            if (newCount >= MAX_FAILED_ATTEMPTS) {
+                it[lockedUntil] = Instant.now().plus(LOCKOUT_MINUTES, ChronoUnit.MINUTES)
+            }
+        }
+    }
+
+    /** Call after a successful login - clears any accumulated failed-attempt count. */
+    fun resetFailedLogins(userId: Long) = transaction {
+        Users.update({ Users.id eq userId }) {
+            it[failedLoginAttempts] = 0
+            it[lockedUntil] = null
+        }
     }
 
     /**

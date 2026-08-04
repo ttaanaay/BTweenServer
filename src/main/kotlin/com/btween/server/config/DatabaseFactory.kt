@@ -3,6 +3,7 @@ package com.btween.server.config
 import com.btween.server.data.tables.AppSettings
 import com.btween.server.data.tables.CollectionItems
 import com.btween.server.data.tables.Collections
+import com.btween.server.data.tables.Categories
 import com.btween.server.data.tables.Comments
 import com.btween.server.data.tables.DeviceTokens
 import com.btween.server.data.tables.EmailVerifications
@@ -11,6 +12,7 @@ import com.btween.server.data.tables.Likes
 import com.btween.server.data.tables.Notifications
 import com.btween.server.data.tables.PasswordResets
 import com.btween.server.data.tables.Quotes
+import com.btween.server.data.tables.RefreshTokens
 import com.btween.server.data.tables.Reports
 import com.btween.server.data.tables.Users
 import com.zaxxer.hikari.HikariConfig
@@ -41,7 +43,8 @@ object DatabaseFactory {
         transaction {
             SchemaUtils.createMissingTablesAndColumns(
                 Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets, Comments,
-                Collections, CollectionItems, Reports, EmailVerifications, DeviceTokens
+                Collections, CollectionItems, Reports, EmailVerifications, DeviceTokens, RefreshTokens,
+                Categories
             )
 
             if (AppSettings.selectAll().count() == 0L) {
