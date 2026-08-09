@@ -1,5 +1,6 @@
 package com.btween.server.routes
 
+import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.DeviceTokenRepository
 import com.btween.server.data.repository.QuoteRepository
 import com.btween.server.exception.NotFoundException
@@ -25,7 +26,8 @@ fun Route.cronRoutes(
     quoteRepository: QuoteRepository,
     deviceTokenRepository: DeviceTokenRepository,
     pushNotificationService: PushNotificationService?,
-    cronSecret: String?
+    cronSecret: String?,
+    appSettingsRepository: AppSettingsRepository
 ) {
     route("/cron") {
         post("/send-daily-quote") {
@@ -37,7 +39,8 @@ fun Route.cronRoutes(
             val providedSecret = call.request.header("X-Cron-Secret")
             if (providedSecret != cronSecret) throw UnauthorizedException("Invalid cron secret")
 
-            val quote = quoteRepository.getRandomPublicQuote() ?: throw NotFoundException("No public quotes to feature yet")
+            val quote = resolveDailyQuote(quoteRepository, appSettingsRepository)
+                ?: throw NotFoundException("No public quotes to feature yet")
             val tokens = deviceTokenRepository.getAllTokens()
 
             val body = "\u201C${quote.text.take(120)}\u201D \u2014 ${quote.speaker}"

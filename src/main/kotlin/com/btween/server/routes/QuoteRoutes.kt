@@ -74,6 +74,15 @@ fun Route.quoteRoutes(
                 })
             }
 
+            get("/daily") {
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                val quote = resolveDailyQuote(quoteRepository, appSettingsRepository)
+                    ?: throw NotFoundException("No public quotes to feature yet")
+                val isLiked = viewerId?.let { quote.id in quoteRepository.likedQuoteIds(it, listOf(quote.id)) } ?: false
+                val owner = userRepository.findById(quote.ownerId)!!.toResponse(userRepository, viewerId)
+                call.respond(quote.toResponse(owner = owner, isLikedByMe = isLiked))
+            }
+
             get("/{id}") {
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
                 val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()

@@ -4,6 +4,9 @@ import com.btween.server.data.tables.AppSettings
 import com.btween.server.domain.AppSettingsData
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.LocalDate
+
+data class DailyQuoteRecord(val quoteId: Long, val date: LocalDate)
 
 class AppSettingsRepository {
 
@@ -18,5 +21,23 @@ class AppSettingsRepository {
             it[AppSettings.defaultAutoApprove] = value
         }
         get()
+    }
+
+    /** Null if no quote has ever been picked yet (e.g. cron hasn't run once since launch). */
+    fun getDailyQuote(): DailyQuoteRecord? = transaction {
+        AppSettings.selectAll().where { AppSettings.id eq 1 }
+            .map { row ->
+                val quoteId = row[AppSettings.dailyQuoteId]
+                val date = row[AppSettings.dailyQuoteDate]
+                if (quoteId != null && date != null) DailyQuoteRecord(quoteId, date) else null
+            }
+            .singleOrNull()
+    }
+
+    fun setDailyQuote(quoteId: Long, date: LocalDate) = transaction {
+        AppSettings.update({ AppSettings.id eq 1 }) {
+            it[AppSettings.dailyQuoteId] = quoteId
+            it[AppSettings.dailyQuoteDate] = date
+        }
     }
 }

@@ -146,6 +146,6 @@ fun Application.module(config: AppConfig) {
 
         // Not JWT-authenticated (an external cron service can't do an interactive login) -
         // protected by its own shared-secret header check instead. See CronRoutes.kt.
-        cronRoutes(quoteRepository, deviceTokenRepository, pushNotificationService, config.dailyQuoteCronSecret)
+        cronRoutes(quoteRepository, deviceTokenRepository, pushNotificationService, config.dailyQuoteCronSecret, appSettingsRepository)
     }
 }

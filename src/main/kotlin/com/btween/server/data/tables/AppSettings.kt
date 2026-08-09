@@ -1,6 +1,7 @@
 package com.btween.server.data.tables
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.javatime.date
 
 /**
  * A single-row table (id is always 1) holding server-wide settings an admin can change
@@ -16,6 +17,11 @@ object AppSettings : Table("app_settings") {
     // pending-review feature existed as APPROVED, so they don't vanish from the feed the
     // moment this migration runs.
     val legacyQuotesMigrated = bool("legacy_quotes_migrated").default(false)
+    // The quote picked as "today's quote" - same one featured in the Home screen hero card
+    // and the daily push notification, so both agree and everyone sees the same one for the
+    // whole day. Re-picked once dailyQuoteDate falls behind the current date.
+    val dailyQuoteId = long("daily_quote_id").nullable()
+    val dailyQuoteDate = date("daily_quote_date").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
