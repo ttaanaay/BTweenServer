@@ -16,6 +16,7 @@ import com.btween.server.data.repository.RefreshTokenRepository
 import com.btween.server.data.repository.ReportRepository
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.email.ConsoleEmailSender
+import com.btween.server.email.ResendEmailSender
 import com.btween.server.plugins.API_RATE_LIMIT
 import com.btween.server.plugins.configureCors
 import com.btween.server.plugins.configureRateLimiting
@@ -74,7 +75,13 @@ fun Application.module(config: AppConfig) {
     val passwordResetRepository = PasswordResetRepository()
     val emailVerificationRepository = EmailVerificationRepository()
     val deviceTokenRepository = DeviceTokenRepository()
-    val emailSender = ConsoleEmailSender()
+    val emailSender = if (config.resendApiKey != null && config.emailFromAddress != null) {
+        println("Email: using Resend (from ${config.emailFromAddress})")
+        ResendEmailSender(config.resendApiKey, config.emailFromAddress)
+    } else {
+        println("Email: RESEND_API_KEY/EMAIL_FROM_ADDRESS not set - falling back to console logging")
+        ConsoleEmailSender()
+    }
     val jwtService = JwtService(config)
 
     // Nullable, same pattern as the Google Sign-In verifier: the server boots fine without

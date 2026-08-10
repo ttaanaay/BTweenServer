@@ -74,6 +74,23 @@ fun Route.quoteRoutes(
                 })
             }
 
+            get("/by-tag") {
+                val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
+                val tag = call.parameters["tag"]?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: throw ValidationException("tag query parameter is required")
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 20
+                val offset = call.parameters["offset"]?.toLongOrNull() ?: 0L
+
+                val quotes = quoteRepository.getQuotesByTag(tag, limit, offset)
+                val likedIds = viewerId?.let { quoteRepository.likedQuoteIds(it, quotes.map { q -> q.id }) } ?: emptySet()
+                val ownersById = quotes.map { it.ownerId }.distinct()
+                    .associateWith { userRepository.findById(it)!!.toResponse(userRepository, viewerId) }
+
+                call.respond(quotes.map { quote ->
+                    quote.toResponse(owner = ownersById.getValue(quote.ownerId), isLikedByMe = quote.id in likedIds)
+                })
+            }
+
             get("/daily") {
                 val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
                 val quote = resolveDailyQuote(quoteRepository, appSettingsRepository)

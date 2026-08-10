@@ -113,6 +113,25 @@ class QuoteRepository {
             .map { it.toQuote() }
     }
 
+    /** Public, approved quotes carrying [tag] exactly (case-insensitive) - used by the
+     * "tap a tag" browsing feature. tags is stored as one comma-separated varchar column
+     * rather than a normalized table, so an exact match can't be done in SQL alone without
+     * false positives (a LIKE '%love%' would also match "lovely") - this does a broad SQL
+     * pre-filter then an exact check in Kotlin. Fine at this scale; would need a real join
+     * table if the quote count grows large enough for this to matter. */
+    fun getQuotesByTag(tag: String, limit: Int, offset: Long): List<Quote> = transaction {
+        Quotes.selectAll()
+            .where {
+                (Quotes.visibility eq "PUBLIC") and (Quotes.status eq "APPROVED") and
+                    (Quotes.tags.lowerCase() like "%${tag.lowercase()}%")
+            }
+            .orderBy(Quotes.createdAt, SortOrder.DESC)
+            .map { it.toQuote() }
+            .filter { quote -> quote.tags.any { it.equals(tag, ignoreCase = true) } }
+            .drop(offset.toInt())
+            .take(limit)
+    }
+
     /** Picks a random approved public quote to feature as the "quote of the day" push
      * notification. Weighted toward liked quotes isn't worth the complexity for this - a
      * simple random pick from the whole approved/public pool is good enough. */

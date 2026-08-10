@@ -28,7 +28,13 @@ data class AppConfig(
     // A shared secret the external cron job (see docs) must send to trigger the daily
     // push - there's no interactive user to log in as, so this substitutes for JWT auth on
     // that one endpoint.
-    val dailyQuoteCronSecret: String?
+    val dailyQuoteCronSecret: String?,
+    // Resend (https://resend.com) API key - only real-email-sending needs this. Left null
+    // (rather than required) so the server still boots without it; ConsoleEmailSender is
+    // used instead, logging codes to the server console.
+    val resendApiKey: String?,
+    // Must be on a domain verified in the Resend dashboard, e.g. "BTween <no-reply@yourdomain.com>".
+    val emailFromAddress: String?
 ) {
     companion object {
         /**
@@ -54,7 +60,9 @@ data class AppConfig(
                 allowedCorsHost = System.getenv("CORS_ALLOWED_HOST"),
                 googleClientId = System.getenv("GOOGLE_CLIENT_ID"),
                 firebaseServiceAccountJson = System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON"),
-                dailyQuoteCronSecret = System.getenv("DAILY_QUOTE_CRON_SECRET")
+                dailyQuoteCronSecret = System.getenv("DAILY_QUOTE_CRON_SECRET"),
+                resendApiKey = System.getenv("RESEND_API_KEY"),
+                emailFromAddress = System.getenv("EMAIL_FROM_ADDRESS")
             )
         }
 
