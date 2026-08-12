@@ -17,9 +17,10 @@ fun Application.configureCors(config: AppConfig) {
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
 
-        val host = config.allowedCorsHost
-        if (host != null) {
-            allowHost(host, schemes = listOf("https", "http"))
+        if (config.allowedCorsHosts.isNotEmpty()) {
+            config.allowedCorsHosts.forEach { host ->
+                allowHost(host, schemes = listOf("https", "http"))
+            }
         } else {
             anyHost() // fine for a mobile-only client with no cookies; tighten if a web client is added later
         }

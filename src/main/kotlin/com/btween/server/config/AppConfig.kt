@@ -16,7 +16,9 @@ data class AppConfig(
     val jwtIssuer: String,
     val jwtAccessTokenExpiryMinutes: Long,
     val jwtRefreshTokenExpiryDays: Long,
-    val allowedCorsHost: String?,
+    // Comma-separated list, e.g. "ttaanaay.github.io,btween.vercel.app" - lets both the
+    // admin panel and the web app talk to the API without opening it up to any origin.
+    val allowedCorsHosts: List<String>,
     // Only /auth/oauth/google needs this. Left null (rather than required) so the server
     // still boots normally before you've set up Google Sign-In - that one endpoint just
     // fails until it's configured, everything else works as before.
@@ -57,7 +59,11 @@ data class AppConfig(
                 jwtIssuer = System.getenv("JWT_ISSUER") ?: "btween-server",
                 jwtAccessTokenExpiryMinutes = System.getenv("JWT_ACCESS_EXPIRY_MINUTES")?.toLongOrNull() ?: 60L,
                 jwtRefreshTokenExpiryDays = System.getenv("JWT_REFRESH_EXPIRY_DAYS")?.toLongOrNull() ?: 30L,
-                allowedCorsHost = System.getenv("CORS_ALLOWED_HOST"),
+                allowedCorsHosts = System.getenv("CORS_ALLOWED_HOST")
+                    ?.split(",")
+                    ?.map { it.trim().removePrefix("https://").removePrefix("http://").trimEnd('/') }
+                    ?.filter { it.isNotEmpty() }
+                    ?: emptyList(),
                 googleClientId = System.getenv("GOOGLE_CLIENT_ID"),
                 firebaseServiceAccountJson = System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON"),
                 dailyQuoteCronSecret = System.getenv("DAILY_QUOTE_CRON_SECRET"),

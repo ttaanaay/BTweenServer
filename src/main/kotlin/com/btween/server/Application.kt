@@ -112,6 +112,7 @@ fun Application.module(config: AppConfig) {
 
     configureSerialization()
     configureStatusPages()
+    println("CORS: allowed hosts = ${config.allowedCorsHosts.ifEmpty { listOf("(none configured - allowing any host)") }}")
     configureCors(config)
     configureSecurity(config)
     configureRateLimiting()
