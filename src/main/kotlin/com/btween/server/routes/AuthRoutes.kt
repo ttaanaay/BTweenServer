@@ -17,6 +17,7 @@ import com.btween.server.dto.RefreshRequest
 import com.btween.server.dto.RegisterRequest
 import com.btween.server.dto.ResetPasswordRequest
 import com.btween.server.dto.ResendVerificationRequest
+import com.btween.server.dto.VerifyCodeRequest
 import com.btween.server.dto.VerifyEmailRequest
 import com.btween.server.dto.toResponse
 import com.btween.server.email.EmailSender
@@ -256,6 +257,35 @@ fun Route.authRoutes(
                     )
                 }
                 call.respond(HttpStatusCode.OK, MessageResponse("If that email needs verifying, a new code has been sent."))
+            }
+
+            authenticate(AUTH_JWT) {
+                // Session-based counterparts of the two endpoints above - for a logged-in
+                // person, the server already knows which account it's verifying from the
+                // token, so there's no reason to ask them to type their own email (and no
+                // way for them to accidentally target a different account by mistyping it).
+                post("/verify-email-me") {
+                    val userId = call.requireUserId()
+                    val request = call.receive<VerifyCodeRequest>()
+                    val valid = emailVerificationRepository.verifyAndConsumeCode(userId, request.code)
+                    if (!valid) throw ValidationException("Invalid or expired code")
+                    userRepository.markEmailVerified(userId)
+                    call.respond(HttpStatusCode.OK, MessageResponse("Email verified"))
+                }
+
+                post("/resend-verification-me") {
+                    val userId = call.requireUserId()
+                    val user = userRepository.findById(userId) ?: throw NotFoundException("User not found")
+                    if (!user.emailVerified) {
+                        val code = emailVerificationRepository.createCode(user.id)
+                        emailSender.send(
+                            to = user.email,
+                            subject = "Verify your BTween email",
+                            body = "Your verification code is: $code\nIt expires in 15 minutes."
+                        )
+                    }
+                    call.respond(HttpStatusCode.OK, MessageResponse("A new code has been sent."))
+                }
             }
 
             authenticate(AUTH_JWT) {
