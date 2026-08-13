@@ -46,6 +46,23 @@ import io.ktor.server.routing.route
 private val USERNAME_REGEX = Regex("^[a-zA-Z0-9_]{3,20}$")
 private val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
+// Usernames that could make someone look like BTween staff, an official account, or a
+// moderator - reserved so a regular signup can't impersonate one. Checked case-insensitively
+// and after stripping underscores/digits, so "Admin", "admin_", and "admin123" are all
+// caught, not just an exact "admin" match.
+private val RESERVED_USERNAMES = setOf(
+    "admin", "administrator", "root", "superuser", "sysadmin",
+    "moderator", "mod", "staff", "support", "helpdesk", "help",
+    "official", "btween", "btweenofficial", "btweenteam", "btweensupport", "btweenapp",
+    "security", "system", "webmaster", "owner", "founder", "ceo",
+    "team", "verified", "bot", "service", "noreply", "notification", "notifications"
+)
+
+private fun isReservedUsername(username: String): Boolean {
+    val normalized = username.lowercase().filter { it.isLetter() }
+    return RESERVED_USERNAMES.any { reserved -> normalized == reserved || normalized.startsWith(reserved) }
+}
+
 fun Route.authRoutes(
     userRepository: UserRepository,
     jwtService: JwtService,
@@ -66,6 +83,9 @@ fun Route.authRoutes(
 
                 if (!USERNAME_REGEX.matches(request.username)) {
                     throw ValidationException("Username must be 3-20 characters: letters, numbers, underscore only")
+                }
+                if (isReservedUsername(request.username)) {
+                    throw ValidationException("That username isn't available")
                 }
                 if (!EMAIL_REGEX.matches(request.email)) {
                     throw ValidationException("Please enter a valid email address")
@@ -97,7 +117,38 @@ fun Route.authRoutes(
                     body = "Your verification code is: $code\nIt expires in 15 minutes."
                 )
 
-                call.respond(HttpStatusCode.Created, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
+                // Deliberately no tokens here - the account exists (so the username/email
+                // are reserved and can't be grabbed by someone else mid-verification) but
+                // isn't usable until /auth/verify-registration succeeds below. That's what
+                // actually logs the person in for the first time.
+                call.respond(
+                    HttpStatusCode.Created,
+                    RegistrationPendingResponse(
+                        email = user.email,
+                        message = "We've sent a verification code to ${user.email}. Enter it to finish creating your account."
+                    )
+                )
+            }
+
+            post("/verify-registration") {
+                val request = call.receive<VerifyEmailRequest>()
+                val user = userRepository.findByEmail(request.email)
+                    ?: throw ValidationException("Invalid or expired code")
+
+                if (user.emailVerified) {
+                    // Already verified (e.g. a retried/duplicate request) - just log them
+                    // in rather than erroring, since the outcome the person wants either
+                    // way is "get me into my account".
+                    call.respond(buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
+                    return@post
+                }
+
+                val valid = emailVerificationRepository.verifyAndConsumeCode(user.id, request.code)
+                if (!valid) throw ValidationException("Invalid or expired code")
+
+                userRepository.markEmailVerified(user.id)
+                val verifiedUser = userRepository.findById(user.id) ?: user
+                call.respond(buildAuthResponse(verifiedUser, jwtService, userRepository, refreshTokenRepository, config))
             }
 
             post("/login") {
@@ -347,9 +398,10 @@ private fun findOrCreateOAuthUser(userRepository: UserRepository, provider: Stri
         .filter { it.isLetterOrDigit() || it == '_' }
         .take(15)
         .ifBlank { "user" }
+        .let { if (isReservedUsername(it)) "user" else it }
     var username = baseUsername
     var suffix = 0
-    while (userRepository.usernameTaken(username)) {
+    while (userRepository.usernameTaken(username) || isReservedUsername(username)) {
         suffix++
         username = "$baseUsername$suffix"
     }
