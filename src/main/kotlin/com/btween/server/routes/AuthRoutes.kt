@@ -8,6 +8,7 @@ import com.btween.server.data.repository.RefreshTokenStatus
 import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AuthResponse
+import com.btween.server.dto.RegistrationPendingResponse
 import com.btween.server.dto.ChangePasswordRequest
 import com.btween.server.dto.ForgotPasswordRequest
 import com.btween.server.dto.LoginRequest
