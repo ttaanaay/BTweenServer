@@ -177,6 +177,11 @@ fun Route.authRoutes(
                 if (user.isBanned) {
                     throw UnauthorizedException("This account has been suspended")
                 }
+                if (!user.emailVerified) {
+                    throw UnauthorizedException(
+                        "Please verify your email before logging in. Check your inbox for the code, or request a new one."
+                    )
+                }
 
                 userRepository.resetFailedLogins(user.id)
                 call.respond(HttpStatusCode.OK, buildAuthResponse(user, jwtService, userRepository, refreshTokenRepository, config))
