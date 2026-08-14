@@ -1,6 +1,8 @@
 package com.btween.server.data.repository
 
+import com.btween.server.data.tables.Quotes
 import com.btween.server.data.tables.Reports
+import com.btween.server.data.tables.Users
 import com.btween.server.domain.Report
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -9,6 +11,8 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.Instant
+
+data class FlaggedUser(val userId: Long, val reportCount: Int, val isBanned: Boolean)
 
 class ReportRepository {
 
@@ -54,5 +58,42 @@ class ReportRepository {
 
     fun updateStatus(id: Long, status: String): Boolean = transaction {
         Reports.update({ Reports.id eq id }) { it[Reports.status] = status } > 0
+    }
+
+    /** Users worth an admin's attention: whoever a report ultimately points at, whether the
+     * report is against their account directly (targetType "USER") or against one of their
+     * quotes (targetType "QUOTE", resolved to the quote's owner here). Counts every report
+     * regardless of status - a dismissed report still reflects something an admin may want
+     * visibility into if the pattern repeats. */
+    fun getFlaggedUsers(minReportCount: Int, limit: Int): List<FlaggedUser> = transaction {
+        val allReports = Reports.selectAll().map { it[Reports.targetType] to it[Reports.targetId] }
+
+        val quoteIds = allReports.filter { it.first == "QUOTE" }.map { it.second }.distinct()
+        val quoteOwnerById = if (quoteIds.isEmpty()) {
+            emptyMap()
+        } else {
+            Quotes.selectAll().where { Quotes.id inList quoteIds }
+                .associate { it[Quotes.id] to it[Quotes.ownerId] }
+        }
+
+        val userIdCounts = allReports
+            .mapNotNull { (type, targetId) ->
+                when (type) {
+                    "USER" -> targetId
+                    "QUOTE" -> quoteOwnerById[targetId]
+                    else -> null
+                }
+            }
+            .groupingBy { it }
+            .eachCount()
+
+        val bannedById = Users.selectAll().where { Users.id inList userIdCounts.keys }
+            .associate { it[Users.id] to it[Users.isBanned] }
+
+        userIdCounts
+            .filterValues { it >= minReportCount }
+            .map { (userId, count) -> FlaggedUser(userId, count, bannedById[userId] ?: false) }
+            .sortedByDescending { it.reportCount }
+            .take(limit)
     }
 }

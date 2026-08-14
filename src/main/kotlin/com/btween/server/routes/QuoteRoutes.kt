@@ -105,7 +105,14 @@ fun Route.quoteRoutes(
                 val viewerId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asLong()
                 val quote = quoteRepository.findById(id) ?: throw NotFoundException("Quote not found")
 
-                if (quote.visibility == "PRIVATE" && quote.ownerId != viewerId) {
+                val isOwner = quote.ownerId == viewerId
+                if (quote.visibility == "PRIVATE" && !isOwner) {
+                    throw NotFoundException("Quote not found")
+                }
+                // A quote pulled from public listing (hidden by an admin, rejected, or still
+                // pending review) shouldn't be reachable by guessing/keeping its direct link
+                // either - only the owner can still see their own quote in those states.
+                if (quote.status != "APPROVED" && !isOwner) {
                     throw NotFoundException("Quote not found")
                 }
 

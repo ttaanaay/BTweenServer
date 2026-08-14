@@ -45,6 +45,18 @@ data class SetAdminStatusRequest(val isAdmin: Boolean)
 data class CreateCategoryRequest(val name: String)
 
 @Serializable
+data class CreateSourceTypeRequest(val name: String)
+
+@Serializable
+data class FlaggedUserResponse(
+    val userId: Long,
+    val username: String,
+    val displayName: String,
+    val reportCount: Int,
+    val isBanned: Boolean
+)
+
+@Serializable
 data class SetAutoApproveRequest(val autoApprove: Boolean?)
 
 @Serializable
@@ -83,7 +95,8 @@ data class AnalyticsPoint(
     val newUsers: Int,
     val newQuotes: Int,
     val newLikes: Int,
-    val newComments: Int
+    val newComments: Int,
+    val activeUsers: Int
 )
 
 @Serializable

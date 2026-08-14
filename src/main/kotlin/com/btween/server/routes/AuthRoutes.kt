@@ -6,10 +6,13 @@ import com.btween.server.data.repository.PasswordResetRepository
 import com.btween.server.data.repository.RefreshTokenRepository
 import com.btween.server.data.repository.RefreshTokenStatus
 import com.btween.server.data.repository.UserRepository
+import com.btween.server.data.tables.LoginEvents
 import com.btween.server.domain.User
 import com.btween.server.dto.AuthResponse
 import com.btween.server.dto.RegistrationPendingResponse
 import com.btween.server.dto.ChangePasswordRequest
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.transactions.transaction
 import com.btween.server.dto.ForgotPasswordRequest
 import com.btween.server.dto.LoginRequest
 import com.btween.server.dto.MessageResponse
@@ -378,6 +381,12 @@ private fun buildAuthResponse(
         rawToken = refreshToken,
         expiresAt = java.time.Instant.now().plusSeconds(config.jwtRefreshTokenExpiryDays * 86_400L)
     )
+    transaction {
+        LoginEvents.insert {
+            it[LoginEvents.userId] = user.id
+            it[occurredAt] = java.time.Instant.now()
+        }
+    }
     return AuthResponse(accessToken, refreshToken, user.toResponse(userRepository, user.id))
 }
 

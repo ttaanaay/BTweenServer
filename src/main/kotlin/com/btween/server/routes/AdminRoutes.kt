@@ -3,6 +3,7 @@ package com.btween.server.routes
 import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.CategoryRepository
+import com.btween.server.data.repository.SourceTypeRepository
 import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
 import com.btween.server.data.repository.QuoteRepository
@@ -11,11 +12,13 @@ import com.btween.server.data.repository.UserRepository
 import com.btween.server.domain.User
 import com.btween.server.dto.AdminCommentResponse
 import com.btween.server.dto.AdminStatsResponse
+import com.btween.server.dto.FlaggedUserResponse
 import com.btween.server.dto.AdminUserDetailResponse
 import com.btween.server.dto.AnalyticsPoint
 import com.btween.server.dto.AnalyticsResponse
 import com.btween.server.dto.AppSettingsResponse
 import com.btween.server.dto.CreateCategoryRequest
+import com.btween.server.dto.CreateSourceTypeRequest
 import com.btween.server.dto.ReportResponse
 import com.btween.server.dto.SetAdminStatusRequest
 import com.btween.server.dto.SetAutoApproveRequest
@@ -60,7 +63,8 @@ fun Route.adminRoutes(
     reportRepository: ReportRepository,
     commentRepository: CommentRepository,
     analyticsRepository: AnalyticsRepository,
-    categoryRepository: CategoryRepository
+    categoryRepository: CategoryRepository,
+    sourceTypeRepository: SourceTypeRepository
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -161,7 +165,8 @@ fun Route.adminRoutes(
                                 newUsers = it.newUsers,
                                 newQuotes = it.newQuotes,
                                 newLikes = it.newLikes,
-                                newComments = it.newComments
+                                newComments = it.newComments,
+                                activeUsers = it.activeUsers
                             )
                         }
                     )
@@ -196,6 +201,34 @@ fun Route.adminRoutes(
                 call.respond(HttpStatusCode.NoContent)
             }
 
+            get("/source-types") {
+                call.requireAdmin(userRepository)
+                call.respond(sourceTypeRepository.getAll().map { SourceTypeResponse(it.id, it.name) })
+            }
+
+            post("/source-types") {
+                call.requireAdmin(userRepository)
+                val request = call.receive<CreateSourceTypeRequest>()
+                val name = request.name.trim()
+                if (name.isEmpty() || name.length > 60) {
+                    throw ValidationException("Source type name must be 1-60 characters")
+                }
+                val sourceType = try {
+                    sourceTypeRepository.create(name)
+                } catch (e: Exception) {
+                    throw ValidationException("A source type with that name already exists")
+                }
+                call.respond(HttpStatusCode.Created, SourceTypeResponse(sourceType.id, sourceType.name))
+            }
+
+            delete("/source-types/{id}") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid source type id")
+                val deleted = sourceTypeRepository.delete(id)
+                if (!deleted) throw NotFoundException("Source type not found")
+                call.respond(HttpStatusCode.NoContent)
+            }
+
             get("/quotes/pending") {
                 call.requireAdmin(userRepository)
                 val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
@@ -215,6 +248,21 @@ fun Route.adminRoutes(
                 call.respond(quote.toAdminResponse(owner?.username ?: "unknown"))
             }
 
+            get("/quotes/search") {
+                call.requireAdmin(userRepository)
+                val query = call.parameters["q"]?.trim().orEmpty()
+                if (query.isEmpty()) {
+                    call.respond(emptyList<Any>())
+                    return@get
+                }
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 20
+                val results = quoteRepository.adminSearch(query, limit)
+                call.respond(results.map { quote ->
+                    val owner = userRepository.findById(quote.ownerId)
+                    quote.toAdminResponse(owner?.username ?: "unknown")
+                })
+            }
+
             post("/quotes/{id}/reject") {
                 val admin = call.requireAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
@@ -225,6 +273,28 @@ fun Route.adminRoutes(
                     type = "REJECTED",
                     quoteId = id
                 )
+                val owner = userRepository.findById(quote.ownerId)
+                call.respond(quote.toAdminResponse(owner?.username ?: "unknown"))
+            }
+
+            // Distinct from reject - reject is part of the pending-review workflow (with a
+            // notification to the owner explaining why their submission wasn't approved).
+            // Hide is for something that was already live and approved, but needs pulling
+            // for a policy reason after the fact - no "your submission was rejected"
+            // notification, since that framing wouldn't fit a quote that had already been
+            // public for a while.
+            post("/quotes/{id}/hide") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
+                val quote = quoteRepository.setStatus(id, "HIDDEN") ?: throw NotFoundException("Quote not found")
+                val owner = userRepository.findById(quote.ownerId)
+                call.respond(quote.toAdminResponse(owner?.username ?: "unknown"))
+            }
+
+            post("/quotes/{id}/unhide") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid quote id")
+                val quote = quoteRepository.setStatus(id, "APPROVED") ?: throw NotFoundException("Quote not found")
                 val owner = userRepository.findById(quote.ownerId)
                 call.respond(quote.toAdminResponse(owner?.username ?: "unknown"))
             }
@@ -248,6 +318,25 @@ fun Route.adminRoutes(
                 val request = call.receive<UpdateAppSettingsRequest>()
                 val settings = appSettingsRepository.setDefaultAutoApprove(request.defaultAutoApprove)
                 call.respond(AppSettingsResponse(settings.defaultAutoApprove))
+            }
+
+            get("/flagged-users") {
+                call.requireAdmin(userRepository)
+                val minReports = call.parameters["minReports"]?.toIntOrNull()?.coerceAtLeast(1) ?: 3
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
+                val flagged = reportRepository.getFlaggedUsers(minReports, limit)
+                call.respond(
+                    flagged.mapNotNull { f ->
+                        val user = userRepository.findById(f.userId) ?: return@mapNotNull null
+                        FlaggedUserResponse(
+                            userId = f.userId,
+                            username = user.username,
+                            displayName = user.displayName,
+                            reportCount = f.reportCount,
+                            isBanned = f.isBanned
+                        )
+                    }
+                )
             }
 
             get("/reports") {

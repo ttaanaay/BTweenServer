@@ -231,6 +231,25 @@ class QuoteRepository {
         findById(id)
     }
 
+    /** For the admin panel's "find a published quote to hide" search - matches quote text,
+     * speaker, or source title, across APPROVED and HIDDEN quotes (so a quote that's already
+     * hidden still turns up if an admin searches for it again, e.g. to unhide it). */
+    fun adminSearch(query: String, limit: Int): List<Quote> = transaction {
+        val needle = "%${query.lowercase()}%"
+        Quotes.selectAll()
+            .where {
+                (Quotes.status inList listOf("APPROVED", "HIDDEN")) and
+                    (
+                        (Quotes.text.lowerCase() like needle) or
+                            (Quotes.speaker.lowerCase() like needle) or
+                            (Quotes.sourceTitle.lowerCase() like needle)
+                        )
+            }
+            .orderBy(Quotes.createdAt, SortOrder.DESC)
+            .limit(limit)
+            .map { it.toQuote() }
+    }
+
     fun countAll(): Long = transaction { Quotes.selectAll().count() }
 
     fun countByStatus(status: String): Long = transaction {

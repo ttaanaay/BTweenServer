@@ -9,11 +9,13 @@ import com.btween.server.data.tables.DeviceTokens
 import com.btween.server.data.tables.EmailVerifications
 import com.btween.server.data.tables.Follows
 import com.btween.server.data.tables.Likes
+import com.btween.server.data.tables.LoginEvents
 import com.btween.server.data.tables.Notifications
 import com.btween.server.data.tables.PasswordResets
 import com.btween.server.data.tables.Quotes
 import com.btween.server.data.tables.RefreshTokens
 import com.btween.server.data.tables.Reports
+import com.btween.server.data.tables.SourceTypes
 import com.btween.server.data.tables.Users
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -44,7 +46,7 @@ object DatabaseFactory {
             SchemaUtils.createMissingTablesAndColumns(
                 Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets, Comments,
                 Collections, CollectionItems, Reports, EmailVerifications, DeviceTokens, RefreshTokens,
-                Categories
+                Categories, LoginEvents, SourceTypes
             )
 
             if (AppSettings.selectAll().count() == 0L) {
