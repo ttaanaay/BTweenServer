@@ -3,6 +3,7 @@ package com.btween.server.routes
 import com.btween.server.data.repository.AnalyticsRepository
 import com.btween.server.data.repository.AppSettingsRepository
 import com.btween.server.data.repository.CategoryRepository
+import com.btween.server.data.repository.IconCatalog
 import com.btween.server.data.repository.SourceTypeRepository
 import com.btween.server.data.repository.CommentRepository
 import com.btween.server.data.repository.NotificationRepository
@@ -185,13 +186,38 @@ fun Route.adminRoutes(
                 if (name.isEmpty() || name.length > 60) {
                     throw ValidationException("Category name must be 1-60 characters")
                 }
-                val icon = request.icon?.trim().takeUnless { it.isNullOrEmpty() } ?: "\uD83C\uDFF7\uFE0F"
+                val icon = request.icon?.trim().takeUnless { it.isNullOrEmpty() } ?: IconCatalog.DEFAULT
+                if (!IconCatalog.isValid(icon)) {
+                    throw ValidationException("Unknown icon - pick one of: ${IconCatalog.KEYS.joinToString()}")
+                }
                 val category = try {
                     categoryRepository.create(name, icon)
                 } catch (e: Exception) {
                     throw ValidationException("A category with that name already exists")
                 }
                 call.respond(HttpStatusCode.Created, CategoryResponse(category.id, category.name, category.icon))
+            }
+
+            put("/categories/{id}") {
+                call.requireAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid category id")
+                val request = call.receive<CreateCategoryRequest>()
+                val name = request.name.trim()
+                if (name.isEmpty() || name.length > 60) {
+                    throw ValidationException("Category name must be 1-60 characters")
+                }
+                val icon = request.icon?.trim().takeUnless { it.isNullOrEmpty() } ?: IconCatalog.DEFAULT
+                if (!IconCatalog.isValid(icon)) {
+                    throw ValidationException("Unknown icon - pick one of: ${IconCatalog.KEYS.joinToString()}")
+                }
+                val category = try {
+                    categoryRepository.update(id, name, icon) ?: throw NotFoundException("Category not found")
+                } catch (e: NotFoundException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw ValidationException("A category with that name already exists")
+                }
+                call.respond(CategoryResponse(category.id, category.name, category.icon))
             }
 
             delete("/categories/{id}") {

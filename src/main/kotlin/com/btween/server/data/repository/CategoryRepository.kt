@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
@@ -40,19 +41,28 @@ class CategoryRepository {
         Categories.deleteWhere { with(SqlExpressionBuilder) { Categories.id eq id } } > 0
     }
 
+    fun update(id: Long, name: String, icon: String): Category? = transaction {
+        val updated = Categories.update({ Categories.id eq id }) {
+            it[Categories.name] = name
+            it[Categories.icon] = icon
+        }
+        if (updated == 0) return@transaction null
+        Categories.selectAll().where { Categories.id eq id }.map { it.toCategory() }.singleOrNull()
+    }
+
     /** Seeds the original hardcoded category list on first run only, so existing installs
      * don't suddenly show an empty category row. No-ops if any categories already exist. */
     fun seedDefaultsIfEmpty() = transaction {
         if (Categories.selectAll().empty()) {
             val defaults = listOf(
-                "Life" to "\uD83C\uDF31",
-                "Love" to "\u2764\uFE0F",
-                "Motivation" to "\uD83D\uDD25",
-                "Success" to "\uD83C\uDFC6",
-                "Wisdom" to "\uD83E\uDDE0",
-                "Humor" to "\uD83D\uDE02",
-                "Books" to "\uD83D\uDCDA",
-                "Movie" to "\uD83C\uDFAC"
+                "Life" to "sun",
+                "Love" to "heart",
+                "Motivation" to "flame",
+                "Success" to "trophy",
+                "Wisdom" to "brain",
+                "Humor" to "laugh",
+                "Books" to "book",
+                "Movie" to "movie"
             )
             defaults.forEachIndexed { index, (name, icon) ->
                 Categories.insert {
