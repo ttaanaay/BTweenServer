@@ -8,13 +8,13 @@ import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CategoryResponse(val id: Long, val name: String)
+data class CategoryResponse(val id: Long, val name: String, val icon: String)
 
 fun Route.categoryRoutes(categoryRepository: CategoryRepository) {
     route("/categories") {
         get {
             val categories = categoryRepository.getAll()
-            call.respond(categories.map { CategoryResponse(it.id, it.name) })
+            call.respond(categories.map { CategoryResponse(it.id, it.name, it.icon) })
         }
     }
 }

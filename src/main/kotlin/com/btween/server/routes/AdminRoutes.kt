@@ -175,7 +175,7 @@ fun Route.adminRoutes(
 
             get("/categories") {
                 call.requireAdmin(userRepository)
-                call.respond(categoryRepository.getAll().map { CategoryResponse(it.id, it.name) })
+                call.respond(categoryRepository.getAll().map { CategoryResponse(it.id, it.name, it.icon) })
             }
 
             post("/categories") {
@@ -185,12 +185,13 @@ fun Route.adminRoutes(
                 if (name.isEmpty() || name.length > 60) {
                     throw ValidationException("Category name must be 1-60 characters")
                 }
+                val icon = request.icon?.trim().takeUnless { it.isNullOrEmpty() } ?: "\uD83C\uDFF7\uFE0F"
                 val category = try {
-                    categoryRepository.create(name)
+                    categoryRepository.create(name, icon)
                 } catch (e: Exception) {
                     throw ValidationException("A category with that name already exists")
                 }
-                call.respond(HttpStatusCode.Created, CategoryResponse(category.id, category.name))
+                call.respond(HttpStatusCode.Created, CategoryResponse(category.id, category.name, category.icon))
             }
 
             delete("/categories/{id}") {

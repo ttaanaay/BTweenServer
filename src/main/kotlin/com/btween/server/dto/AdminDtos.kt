@@ -42,7 +42,7 @@ data class SetBannedRequest(val banned: Boolean)
 data class SetAdminStatusRequest(val isAdmin: Boolean)
 
 @Serializable
-data class CreateCategoryRequest(val name: String)
+data class CreateCategoryRequest(val name: String, val icon: String? = null)
 
 @Serializable
 data class CreateSourceTypeRequest(val name: String)

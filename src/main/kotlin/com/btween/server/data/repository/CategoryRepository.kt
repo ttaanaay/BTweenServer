@@ -10,13 +10,14 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 
-data class Category(val id: Long, val name: String, val sortOrder: Int)
+data class Category(val id: Long, val name: String, val icon: String, val sortOrder: Int)
 
 class CategoryRepository {
 
     private fun ResultRow.toCategory() = Category(
         id = this[Categories.id],
         name = this[Categories.name],
+        icon = this[Categories.icon],
         sortOrder = this[Categories.sortOrder]
     )
 
@@ -24,10 +25,11 @@ class CategoryRepository {
         Categories.selectAll().orderBy(Categories.sortOrder, SortOrder.ASC).map { it.toCategory() }
     }
 
-    fun create(name: String): Category = transaction {
+    fun create(name: String, icon: String): Category = transaction {
         val maxOrder = Categories.selectAll().maxOfOrNull { it[Categories.sortOrder] } ?: -1
         val id = Categories.insert {
             it[Categories.name] = name
+            it[Categories.icon] = icon
             it[sortOrder] = maxOrder + 1
             it[createdAt] = Instant.now()
         } get Categories.id
@@ -42,10 +44,20 @@ class CategoryRepository {
      * don't suddenly show an empty category row. No-ops if any categories already exist. */
     fun seedDefaultsIfEmpty() = transaction {
         if (Categories.selectAll().empty()) {
-            val defaults = listOf("Life", "Love", "Motivation", "Success", "Wisdom", "Humor", "Books", "Movie")
-            defaults.forEachIndexed { index, name ->
+            val defaults = listOf(
+                "Life" to "\uD83C\uDF31",
+                "Love" to "\u2764\uFE0F",
+                "Motivation" to "\uD83D\uDD25",
+                "Success" to "\uD83C\uDFC6",
+                "Wisdom" to "\uD83E\uDDE0",
+                "Humor" to "\uD83D\uDE02",
+                "Books" to "\uD83D\uDCDA",
+                "Movie" to "\uD83C\uDFAC"
+            )
+            defaults.forEachIndexed { index, (name, icon) ->
                 Categories.insert {
                     it[Categories.name] = name
+                    it[Categories.icon] = icon
                     it[sortOrder] = index
                     it[createdAt] = Instant.now()
                 }

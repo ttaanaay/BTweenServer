@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
 object Categories : Table("categories") {
     val id = long("id").autoIncrement()
     val name = varchar("name", 60).uniqueIndex()
+    val icon = varchar("icon", 16).default("🏷️")
     val sortOrder = integer("sort_order").default(0)
     val createdAt = timestamp("created_at")
 
