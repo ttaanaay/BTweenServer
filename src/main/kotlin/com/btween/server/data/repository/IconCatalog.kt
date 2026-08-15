@@ -9,7 +9,9 @@ package com.btween.server.data.repository
 object IconCatalog {
     val KEYS = listOf(
         "sun", "heart", "star", "groups", "brain", "laugh", "book", "movie",
-        "music", "coffee", "moon", "trophy", "flame", "leaf", "compass", "sparkle"
+        "music", "coffee", "moon", "trophy", "flame", "leaf", "compass", "sparkle",
+        "water", "waves", "mountain", "home", "handshake", "flight", "work", "money",
+        "health", "sport", "palette", "peace", "idea", "gift", "growth", "shield"
     )
     const val DEFAULT = "label"
 
