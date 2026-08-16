@@ -9,6 +9,7 @@ data class AdminUserResponse(
     val email: String,
     val displayName: String,
     val isAdmin: Boolean,
+    val isSuperAdmin: Boolean,
     val isBanned: Boolean,
     // null = follows the global default setting; true/false = explicit per-user override.
     val autoApprove: Boolean?,
@@ -40,6 +41,9 @@ data class SetBannedRequest(val banned: Boolean)
 
 @Serializable
 data class SetAdminStatusRequest(val isAdmin: Boolean)
+
+@Serializable
+data class SetSuperAdminStatusRequest(val isSuperAdmin: Boolean)
 
 @Serializable
 data class CreateCategoryRequest(val name: String, val icon: String? = null)

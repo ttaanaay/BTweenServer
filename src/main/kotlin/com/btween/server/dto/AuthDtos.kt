@@ -7,8 +7,12 @@ data class RegisterRequest(
     val username: String,
     val email: String,
     val password: String,
-    val displayName: String
+    val displayName: String,
+    val turnstileToken: String? = null
 )
+
+@Serializable
+data class TurnstileConfigResponse(val enabled: Boolean, val siteKey: String?)
 
 @Serializable
 data class LoginRequest(

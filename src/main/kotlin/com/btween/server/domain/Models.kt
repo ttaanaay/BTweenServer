@@ -11,6 +11,7 @@ data class User(
     val avatarUrl: String?,
     val bio: String?,
     val isAdmin: Boolean,
+    val isSuperAdmin: Boolean,
     val isBanned: Boolean,
     val emailVerified: Boolean,
     val failedLoginAttempts: Int,

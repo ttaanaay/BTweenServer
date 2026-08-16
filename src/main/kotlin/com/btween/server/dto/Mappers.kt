@@ -49,6 +49,7 @@ fun User.toAdminResponse(userRepository: UserRepository): AdminUserResponse = Ad
     email = email,
     displayName = displayName,
     isAdmin = isAdmin,
+    isSuperAdmin = isSuperAdmin,
     isBanned = isBanned,
     autoApprove = autoApprove,
     followerCount = userRepository.followerCount(id),

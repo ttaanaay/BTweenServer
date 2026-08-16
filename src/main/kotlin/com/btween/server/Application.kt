@@ -42,6 +42,7 @@ import com.btween.server.security.FacebookTokenVerifier
 import com.btween.server.security.GoogleTokenVerifier
 import com.btween.server.security.JwtService
 import com.btween.server.security.MicrosoftTokenVerifier
+import com.btween.server.security.TurnstileVerifier
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -114,6 +115,7 @@ fun Application.module(config: AppConfig) {
     val googleVerifier = config.googleClientId?.let { GoogleTokenVerifier(it) }
     val facebookVerifier = FacebookTokenVerifier(oauthHttpClient)
     val microsoftVerifier = MicrosoftTokenVerifier(oauthHttpClient)
+    val turnstileVerifier = TurnstileVerifier(oauthHttpClient)
 
     configureSerialization()
     configureStatusPages()
@@ -138,6 +140,7 @@ fun Application.module(config: AppConfig) {
             googleVerifier,
             facebookVerifier,
             microsoftVerifier,
+            turnstileVerifier,
             passwordResetRepository,
             emailVerificationRepository,
             refreshTokenRepository,

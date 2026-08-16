@@ -26,6 +26,7 @@ class UserRepository {
         avatarUrl = this[Users.avatarUrl],
         bio = this[Users.bio],
         isAdmin = this[Users.isAdmin],
+        isSuperAdmin = this[Users.isSuperAdmin],
         isBanned = this[Users.isBanned],
         emailVerified = this[Users.emailVerified],
         failedLoginAttempts = this[Users.failedLoginAttempts],
@@ -150,7 +151,21 @@ class UserRepository {
     }
 
     fun setAdmin(id: Long, isAdmin: Boolean): User? = transaction {
-        Users.update({ Users.id eq id }) { it[Users.isAdmin] = isAdmin }
+        Users.update({ Users.id eq id }) {
+            it[Users.isAdmin] = isAdmin
+            // Revoking moderator access has to revoke super admin access too - a super
+            // admin with isAdmin=false would be a contradictory, half-revoked state.
+            if (!isAdmin) it[Users.isSuperAdmin] = false
+        }
+        findById(id)
+    }
+
+    fun setSuperAdmin(id: Long, isSuperAdmin: Boolean): User? = transaction {
+        Users.update({ Users.id eq id }) {
+            it[Users.isSuperAdmin] = isSuperAdmin
+            // Granting super admin access implies regular (moderator-level) access too.
+            if (isSuperAdmin) it[Users.isAdmin] = true
+        }
         findById(id)
     }
 

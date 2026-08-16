@@ -57,6 +57,19 @@ private suspend fun ApplicationCall.requireAdmin(userRepository: UserRepository)
     return user
 }
 
+/**
+ * Stricter than [requireAdmin] - for structural/risky operations only: promoting or
+ * demoting other admins, categories, source types, global app settings, and maintenance
+ * mode. Regular (moderator-level) admins can moderate content and users, but not touch
+ * these.
+ */
+private suspend fun ApplicationCall.requireSuperAdmin(userRepository: UserRepository): User {
+    val userId = requireUserId()
+    val user = userRepository.findById(userId) ?: throw ForbiddenException("Super admin access required")
+    if (!user.isSuperAdmin) throw ForbiddenException("Super admin access required")
+    return user
+}
+
 fun Route.adminRoutes(
     userRepository: UserRepository,
     quoteRepository: QuoteRepository,
@@ -70,6 +83,11 @@ fun Route.adminRoutes(
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
+
+            get("/me") {
+                val admin = call.requireAdmin(userRepository)
+                call.respond(admin.toAdminResponse(userRepository))
+            }
 
             get("/stats") {
                 call.requireAdmin(userRepository)
@@ -120,13 +138,25 @@ fun Route.adminRoutes(
             }
 
             put("/users/{id}/admin-status") {
-                val admin = call.requireAdmin(userRepository)
+                val admin = call.requireSuperAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
                 if (id == admin.id) {
                     throw ValidationException("You can't change your own admin status")
                 }
                 val request = call.receive<SetAdminStatusRequest>()
                 val updated = userRepository.setAdmin(id, request.isAdmin)
+                    ?: throw NotFoundException("User not found")
+                call.respond(updated.toAdminResponse(userRepository))
+            }
+
+            put("/users/{id}/super-admin-status") {
+                val admin = call.requireSuperAdmin(userRepository)
+                val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid user id")
+                if (id == admin.id) {
+                    throw ValidationException("You can't change your own super admin status")
+                }
+                val request = call.receive<SetSuperAdminStatusRequest>()
+                val updated = userRepository.setSuperAdmin(id, request.isSuperAdmin)
                     ?: throw NotFoundException("User not found")
                 call.respond(updated.toAdminResponse(userRepository))
             }
@@ -181,7 +211,7 @@ fun Route.adminRoutes(
             }
 
             post("/categories") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val request = call.receive<CreateCategoryRequest>()
                 val name = request.name.trim()
                 if (name.isEmpty() || name.length > 60) {
@@ -200,7 +230,7 @@ fun Route.adminRoutes(
             }
 
             put("/categories/{id}") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid category id")
                 val request = call.receive<CreateCategoryRequest>()
                 val name = request.name.trim()
@@ -222,7 +252,7 @@ fun Route.adminRoutes(
             }
 
             delete("/categories/{id}") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid category id")
                 val deleted = categoryRepository.delete(id)
                 if (!deleted) throw NotFoundException("Category not found")
@@ -235,7 +265,7 @@ fun Route.adminRoutes(
             }
 
             post("/source-types") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val request = call.receive<CreateSourceTypeRequest>()
                 val name = request.name.trim()
                 if (name.isEmpty() || name.length > 60) {
@@ -250,7 +280,7 @@ fun Route.adminRoutes(
             }
 
             delete("/source-types/{id}") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val id = call.parameters["id"]?.toLongOrNull() ?: throw ValidationException("Invalid source type id")
                 val deleted = sourceTypeRepository.delete(id)
                 if (!deleted) throw NotFoundException("Source type not found")
@@ -344,7 +374,7 @@ fun Route.adminRoutes(
             }
 
             put("/settings") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val request = call.receive<UpdateAppSettingsRequest>()
                 val settings = appSettingsRepository.setDefaultAutoApprove(request.defaultAutoApprove)
                 call.respond(
@@ -353,7 +383,7 @@ fun Route.adminRoutes(
             }
 
             put("/maintenance") {
-                call.requireAdmin(userRepository)
+                call.requireSuperAdmin(userRepository)
                 val request = call.receive<SetMaintenanceModeRequest>()
                 val message = request.message?.trim()?.takeIf { it.isNotEmpty() }
                 val settings = appSettingsRepository.setMaintenanceMode(request.enabled, message)

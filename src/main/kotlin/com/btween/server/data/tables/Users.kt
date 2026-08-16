@@ -14,6 +14,13 @@ object Users : Table("users") {
     val avatarUrl = varchar("avatar_url", 512).nullable()
     val bio = varchar("bio", 280).nullable()
     val isAdmin = bool("is_admin").default(false)
+    // Super admins can do everything a regular admin (moderator-level) can, plus manage
+    // structural/risky things: promoting or demoting other admins, categories, source
+    // types, global app settings, and maintenance mode. Every super admin is also a regular
+    // admin in practice, but the flags are independent columns rather than one implying the
+    // other in code, so an existing admin's moderator-level access is never silently revoked
+    // by this migration.
+    val isSuperAdmin = bool("is_super_admin").default(false)
     val isBanned = bool("is_banned").default(false)
     // OAuth providers already verify email ownership themselves, so accounts created via
     // Google/Facebook/Microsoft start out true; local email+password accounts start false

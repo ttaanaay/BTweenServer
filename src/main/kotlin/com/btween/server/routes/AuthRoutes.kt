@@ -19,6 +19,7 @@ import com.btween.server.dto.MessageResponse
 import com.btween.server.dto.OAuthLoginRequest
 import com.btween.server.dto.RefreshRequest
 import com.btween.server.dto.RegisterRequest
+import com.btween.server.dto.TurnstileConfigResponse
 import com.btween.server.dto.ResetPasswordRequest
 import com.btween.server.dto.ResendVerificationRequest
 import com.btween.server.dto.VerifyCodeRequest
@@ -38,12 +39,14 @@ import com.btween.server.security.JwtService
 import com.btween.server.security.MicrosoftTokenVerifier
 import com.btween.server.security.OAuthProfile
 import com.btween.server.security.PasswordHasher
+import com.btween.server.security.TurnstileVerifier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
@@ -73,6 +76,7 @@ fun Route.authRoutes(
     googleVerifier: GoogleTokenVerifier?,
     facebookVerifier: FacebookTokenVerifier,
     microsoftVerifier: MicrosoftTokenVerifier,
+    turnstileVerifier: TurnstileVerifier,
     passwordResetRepository: PasswordResetRepository,
     emailVerificationRepository: EmailVerificationRepository,
     refreshTokenRepository: RefreshTokenRepository,
@@ -82,8 +86,17 @@ fun Route.authRoutes(
     route("/auth") {
         rateLimit(AUTH_RATE_LIMIT) {
 
+            get("/turnstile-config") {
+                val siteKey = System.getenv("TURNSTILE_SITE_KEY")?.trim()?.takeIf { it.isNotEmpty() }
+                call.respond(TurnstileConfigResponse(enabled = turnstileVerifier.isEnabled, siteKey = siteKey))
+            }
+
             post("/register") {
                 val request = call.receive<RegisterRequest>()
+
+                if (!turnstileVerifier.verify(request.turnstileToken)) {
+                    throw ValidationException("Verification failed - please try again")
+                }
 
                 if (!USERNAME_REGEX.matches(request.username)) {
                     throw ValidationException("Username must be 3-20 characters: letters, numbers, underscore only")

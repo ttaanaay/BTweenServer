@@ -21,6 +21,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -66,6 +67,15 @@ object DatabaseFactory {
             if (!settingsRow[AppSettings.legacyQuotesMigrated]) {
                 Quotes.update({ Quotes.status eq "PENDING" }) { it[Quotes.status] = "APPROVED" }
                 AppSettings.update({ AppSettings.id eq 1 }) { it[AppSettings.legacyQuotesMigrated] = true }
+            }
+
+            // Backfill for the isSuperAdmin column: every account that was already a regular
+            // admin before this two-tier system existed keeps full (super admin) access
+            // rather than being silently downgraded to moderator-only. Idempotent - only
+            // ever sets true, never overwrites an explicit downgrade, so it's safe to run
+            // on every startup rather than needing a one-time-only guard flag.
+            Users.update({ (Users.isAdmin eq true) and (Users.isSuperAdmin eq false) }) {
+                it[Users.isSuperAdmin] = true
             }
         }
     }
