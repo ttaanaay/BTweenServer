@@ -23,6 +23,7 @@ import com.btween.server.dto.CreateSourceTypeRequest
 import com.btween.server.dto.ReportResponse
 import com.btween.server.dto.SetAdminStatusRequest
 import com.btween.server.dto.SetMaintenanceModeRequest
+import com.btween.server.dto.SetSuperAdminStatusRequest
 import com.btween.server.dto.SetAutoApproveRequest
 import com.btween.server.dto.SetBannedRequest
 import com.btween.server.dto.UpdateAppSettingsRequest
