@@ -74,9 +74,10 @@ object DatabaseFactory {
             // rather than being silently downgraded to moderator-only. Idempotent - only
             // ever sets true, never overwrites an explicit downgrade, so it's safe to run
             // on every startup rather than needing a one-time-only guard flag.
-            Users.update({ (Users.isAdmin eq true) and (Users.isSuperAdmin eq false) }) {
+            val superAdminBackfillCount = Users.update({ (Users.isAdmin eq true) and (Users.isSuperAdmin eq false) }) {
                 it[Users.isSuperAdmin] = true
             }
+            println("[DatabaseFactory] isSuperAdmin backfill: promoted $superAdminBackfillCount existing admin(s) to super admin")
         }
     }
 }
