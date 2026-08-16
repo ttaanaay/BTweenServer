@@ -22,6 +22,7 @@ import com.btween.server.dto.CreateCategoryRequest
 import com.btween.server.dto.CreateSourceTypeRequest
 import com.btween.server.dto.ReportResponse
 import com.btween.server.dto.SetAdminStatusRequest
+import com.btween.server.dto.SetMaintenanceModeRequest
 import com.btween.server.dto.SetAutoApproveRequest
 import com.btween.server.dto.SetBannedRequest
 import com.btween.server.dto.UpdateAppSettingsRequest
@@ -337,14 +338,28 @@ fun Route.adminRoutes(
             get("/settings") {
                 call.requireAdmin(userRepository)
                 val settings = appSettingsRepository.get()
-                call.respond(AppSettingsResponse(settings.defaultAutoApprove))
+                call.respond(
+                    AppSettingsResponse(settings.defaultAutoApprove, settings.maintenanceMode, settings.maintenanceMessage)
+                )
             }
 
             put("/settings") {
                 call.requireAdmin(userRepository)
                 val request = call.receive<UpdateAppSettingsRequest>()
                 val settings = appSettingsRepository.setDefaultAutoApprove(request.defaultAutoApprove)
-                call.respond(AppSettingsResponse(settings.defaultAutoApprove))
+                call.respond(
+                    AppSettingsResponse(settings.defaultAutoApprove, settings.maintenanceMode, settings.maintenanceMessage)
+                )
+            }
+
+            put("/maintenance") {
+                call.requireAdmin(userRepository)
+                val request = call.receive<SetMaintenanceModeRequest>()
+                val message = request.message?.trim()?.takeIf { it.isNotEmpty() }
+                val settings = appSettingsRepository.setMaintenanceMode(request.enabled, message)
+                call.respond(
+                    AppSettingsResponse(settings.defaultAutoApprove, settings.maintenanceMode, settings.maintenanceMessage)
+                )
             }
 
             get("/flagged-users") {

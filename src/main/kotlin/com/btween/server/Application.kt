@@ -28,6 +28,7 @@ import com.btween.server.push.PushNotificationService
 import com.btween.server.routes.adminRoutes
 import com.btween.server.routes.authRoutes
 import com.btween.server.routes.categoryRoutes
+import com.btween.server.routes.maintenanceRoutes
 import com.btween.server.routes.sourceTypeRoutes
 import com.btween.server.routes.collectionRoutes
 import com.btween.server.routes.commentRoutes
@@ -150,6 +151,7 @@ fun Application.module(config: AppConfig) {
             adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository, commentRepository, analyticsRepository, categoryRepository, sourceTypeRepository)
             categoryRoutes(categoryRepository)
             sourceTypeRoutes(sourceTypeRepository)
+            maintenanceRoutes(appSettingsRepository)
             notificationRoutes(notificationRepository, userRepository, quoteRepository)
             commentRoutes(commentRepository, quoteRepository, userRepository, notificationRepository)
             collectionRoutes(collectionRepository, quoteRepository, userRepository)

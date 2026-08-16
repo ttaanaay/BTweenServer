@@ -22,6 +22,12 @@ object AppSettings : Table("app_settings") {
     // whole day. Re-picked once dailyQuoteDate falls behind the current date.
     val dailyQuoteId = long("daily_quote_id").nullable()
     val dailyQuoteDate = date("daily_quote_date").nullable()
+    // Enforced client-side, not by blocking API requests - clients check this on launch and
+    // show a full-screen "under maintenance" notice if true, rather than the server rejecting
+    // requests outright, which would risk locking the admin out of the very endpoint needed
+    // to turn it back off.
+    val maintenanceMode = bool("maintenance_mode").default(false)
+    val maintenanceMessage = text("maintenance_message").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

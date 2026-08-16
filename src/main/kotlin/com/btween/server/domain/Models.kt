@@ -40,7 +40,9 @@ data class Quote(
 )
 
 data class AppSettingsData(
-    val defaultAutoApprove: Boolean
+    val defaultAutoApprove: Boolean,
+    val maintenanceMode: Boolean = false,
+    val maintenanceMessage: String? = null
 )
 
 data class Notification(

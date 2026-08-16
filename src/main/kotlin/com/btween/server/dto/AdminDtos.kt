@@ -60,10 +60,17 @@ data class FlaggedUserResponse(
 data class SetAutoApproveRequest(val autoApprove: Boolean?)
 
 @Serializable
-data class AppSettingsResponse(val defaultAutoApprove: Boolean)
+data class AppSettingsResponse(
+    val defaultAutoApprove: Boolean,
+    val maintenanceMode: Boolean = false,
+    val maintenanceMessage: String? = null
+)
 
 @Serializable
 data class UpdateAppSettingsRequest(val defaultAutoApprove: Boolean)
+
+@Serializable
+data class SetMaintenanceModeRequest(val enabled: Boolean, val message: String? = null)
 
 @Serializable
 data class AdminStatsResponse(

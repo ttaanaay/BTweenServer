@@ -12,13 +12,27 @@ class AppSettingsRepository {
 
     fun get(): AppSettingsData = transaction {
         AppSettings.selectAll()
-            .map { AppSettingsData(defaultAutoApprove = it[AppSettings.defaultAutoApprove]) }
+            .map {
+                AppSettingsData(
+                    defaultAutoApprove = it[AppSettings.defaultAutoApprove],
+                    maintenanceMode = it[AppSettings.maintenanceMode],
+                    maintenanceMessage = it[AppSettings.maintenanceMessage]
+                )
+            }
             .single()
     }
 
     fun setDefaultAutoApprove(value: Boolean): AppSettingsData = transaction {
         AppSettings.update({ AppSettings.id eq 1 }) {
             it[AppSettings.defaultAutoApprove] = value
+        }
+        get()
+    }
+
+    fun setMaintenanceMode(enabled: Boolean, message: String?): AppSettingsData = transaction {
+        AppSettings.update({ AppSettings.id eq 1 }) {
+            it[AppSettings.maintenanceMode] = enabled
+            it[AppSettings.maintenanceMessage] = message
         }
         get()
     }
