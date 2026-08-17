@@ -6,7 +6,7 @@ plugins {
     application
 }
 
-group = "com.btween.server"
+group = "com.btweeu.server"
 version = "1.0.0"
 
 repositories {
@@ -61,7 +61,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.btween.server.ApplicationKt")
+    mainClass.set("com.btweeu.server.ApplicationKt")
 }
 
 tasks.withType<KotlinCompile> {
@@ -76,6 +76,6 @@ tasks.test {
 
 tasks.jar {
     manifest {
-        attributes["Main-Class"] = "com.btween.server.ApplicationKt"
+        attributes["Main-Class"] = "com.btweeu.server.ApplicationKt"
     }
 }

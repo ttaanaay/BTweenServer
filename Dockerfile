@@ -15,7 +15,7 @@ RUN ./gradlew installDist --no-daemon
 # ---- Run stage ----
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY --from=build /app/build/install/btween-server /app
+COPY --from=build /app/build/install/btweeu-server /app
 
 # Render's containers don't have outbound IPv6 routing. Without this, the JVM's default
 # dual-stack DNS resolution can still pick an IPv6 address for hosts that publish both
@@ -24,4 +24,4 @@ COPY --from=build /app/build/install/btween-server /app
 ENV JAVA_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true"
 
 EXPOSE 8080
-ENTRYPOINT ["/app/bin/btween-server"]
+ENTRYPOINT ["/app/bin/btweeu-server"]

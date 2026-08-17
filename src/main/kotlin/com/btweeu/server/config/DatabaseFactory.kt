@@ -1,0 +1,83 @@
+package com.btweeu.server.config
+
+import com.btweeu.server.data.tables.AppSettings
+import com.btweeu.server.data.tables.CollectionItems
+import com.btweeu.server.data.tables.Collections
+import com.btweeu.server.data.tables.Categories
+import com.btweeu.server.data.tables.Comments
+import com.btweeu.server.data.tables.DeviceTokens
+import com.btweeu.server.data.tables.EmailVerifications
+import com.btweeu.server.data.tables.Follows
+import com.btweeu.server.data.tables.Likes
+import com.btweeu.server.data.tables.LoginEvents
+import com.btweeu.server.data.tables.Notifications
+import com.btweeu.server.data.tables.PasswordResets
+import com.btweeu.server.data.tables.Quotes
+import com.btweeu.server.data.tables.RefreshTokens
+import com.btweeu.server.data.tables.Reports
+import com.btweeu.server.data.tables.SourceTypes
+import com.btweeu.server.data.tables.Users
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
+
+object DatabaseFactory {
+
+    fun init(config: AppConfig) {
+        val hikariConfig = HikariConfig().apply {
+            jdbcUrl = config.jdbcUrl
+            username = config.dbUser
+            password = config.dbPassword
+            driverClassName = "org.postgresql.Driver"
+            maximumPoolSize = 10
+            minimumIdle = 1
+            isAutoCommit = false
+            transactionIsolation = "TRANSACTION_READ_COMMITTED"
+        }
+        val dataSource = HikariDataSource(hikariConfig)
+        Database.connect(dataSource)
+
+        transaction {
+            SchemaUtils.createMissingTablesAndColumns(
+                Users, Quotes, Follows, Likes, AppSettings, Notifications, PasswordResets, Comments,
+                Collections, CollectionItems, Reports, EmailVerifications, DeviceTokens, RefreshTokens,
+                Categories, LoginEvents, SourceTypes
+            )
+
+            if (AppSettings.selectAll().count() == 0L) {
+                AppSettings.insert {
+                    it[AppSettings.id] = 1
+                    it[AppSettings.defaultAutoApprove] = false
+                    it[AppSettings.legacyQuotesMigrated] = false
+                }
+            }
+
+            // One-time backfill: quotes created before this feature existed default to
+            // PENDING (the column's SQL default) purely because Postgres has to put
+            // *something* in the new column. Without this, every quote anyone already
+            // posted would instantly vanish from the feed the moment this migration runs.
+            // Guarded by a flag so it only ever executes once, even across many redeploys.
+            val settingsRow = AppSettings.selectAll().single()
+            if (!settingsRow[AppSettings.legacyQuotesMigrated]) {
+                Quotes.update({ Quotes.status eq "PENDING" }) { it[Quotes.status] = "APPROVED" }
+                AppSettings.update({ AppSettings.id eq 1 }) { it[AppSettings.legacyQuotesMigrated] = true }
+            }
+
+            // Backfill for the isSuperAdmin column: every account that was already a regular
+            // admin before this two-tier system existed keeps full (super admin) access
+            // rather than being silently downgraded to moderator-only. Idempotent - only
+            // ever sets true, never overwrites an explicit downgrade, so it's safe to run
+            // on every startup rather than needing a one-time-only guard flag.
+            val superAdminBackfillCount = Users.update({ (Users.isAdmin eq true) and (Users.isSuperAdmin eq false) }) {
+                it[Users.isSuperAdmin] = true
+            }
+            println("[DatabaseFactory] isSuperAdmin backfill: promoted $superAdminBackfillCount existing admin(s) to super admin")
+        }
+    }
+}

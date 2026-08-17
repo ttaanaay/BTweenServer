@@ -1,1 +1,1 @@
-rootProject.name = "btween-server"
+rootProject.name = "btweeu-server"

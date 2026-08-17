@@ -1,0 +1,33 @@
+package com.btweeu.server.data.tables
+
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.javatime.date
+
+/**
+ * A single-row table (id is always 1) holding server-wide settings an admin can change
+ * without redeploying. Currently just the default moderation behavior for new quotes.
+ */
+object AppSettings : Table("app_settings") {
+    val id = integer("id")
+    // If true, new quotes are published immediately unless the owner has an explicit
+    // autoApprove=false override. If false, new quotes are PENDING by default unless the
+    // owner has an explicit autoApprove=true override.
+    val defaultAutoApprove = bool("default_auto_approve").default(false)
+    // Guards the one-time backfill in DatabaseFactory that marks quotes created before the
+    // pending-review feature existed as APPROVED, so they don't vanish from the feed the
+    // moment this migration runs.
+    val legacyQuotesMigrated = bool("legacy_quotes_migrated").default(false)
+    // The quote picked as "today's quote" - same one featured in the Home screen hero card
+    // and the daily push notification, so both agree and everyone sees the same one for the
+    // whole day. Re-picked once dailyQuoteDate falls behind the current date.
+    val dailyQuoteId = long("daily_quote_id").nullable()
+    val dailyQuoteDate = date("daily_quote_date").nullable()
+    // Enforced client-side, not by blocking API requests - clients check this on launch and
+    // show a full-screen "under maintenance" notice if true, rather than the server rejecting
+    // requests outright, which would risk locking the admin out of the very endpoint needed
+    // to turn it back off.
+    val maintenanceMode = bool("maintenance_mode").default(false)
+    val maintenanceMessage = text("maintenance_message").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
