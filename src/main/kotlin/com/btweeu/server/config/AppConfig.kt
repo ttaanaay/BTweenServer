@@ -36,7 +36,13 @@ data class AppConfig(
     // used instead, logging codes to the server console.
     val resendApiKey: String?,
     // Must be on a domain verified in the Resend dashboard, e.g. "Btweeu <no-reply@yourdomain.com>".
-    val emailFromAddress: String?
+    val emailFromAddress: String?,
+    // Cloudflare Web Analytics (RUM) - powers the admin panel's visitor stats page. All three
+    // are needed together; the feature is simply hidden if any is missing rather than
+    // erroring, since it's optional and unrelated to core app function.
+    val cloudflareApiToken: String?,
+    val cloudflareAccountTag: String?,
+    val cloudflareSiteTag: String?
 ) {
     companion object {
         /**
@@ -68,7 +74,10 @@ data class AppConfig(
                 firebaseServiceAccountJson = System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON"),
                 dailyQuoteCronSecret = System.getenv("DAILY_QUOTE_CRON_SECRET"),
                 resendApiKey = System.getenv("RESEND_API_KEY"),
-                emailFromAddress = System.getenv("EMAIL_FROM_ADDRESS")
+                emailFromAddress = System.getenv("EMAIL_FROM_ADDRESS"),
+                cloudflareApiToken = System.getenv("CLOUDFLARE_API_TOKEN"),
+                cloudflareAccountTag = System.getenv("CLOUDFLARE_ACCOUNT_TAG"),
+                cloudflareSiteTag = System.getenv("CLOUDFLARE_SITE_TAG")
             )
         }
 

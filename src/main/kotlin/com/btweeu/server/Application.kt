@@ -38,6 +38,7 @@ import com.btweeu.server.routes.notificationRoutes
 import com.btweeu.server.routes.quoteRoutes
 import com.btweeu.server.routes.reportRoutes
 import com.btweeu.server.routes.userRoutes
+import com.btweeu.server.analytics.CloudflareAnalyticsClient
 import com.btweeu.server.security.FacebookTokenVerifier
 import com.btweeu.server.security.GoogleTokenVerifier
 import com.btweeu.server.security.JwtService
@@ -116,6 +117,12 @@ fun Application.module(config: AppConfig) {
     val facebookVerifier = FacebookTokenVerifier(oauthHttpClient)
     val microsoftVerifier = MicrosoftTokenVerifier(oauthHttpClient)
     val turnstileVerifier = TurnstileVerifier(oauthHttpClient)
+    val cloudflareAnalyticsClient = CloudflareAnalyticsClient(
+        oauthHttpClient,
+        config.cloudflareApiToken,
+        config.cloudflareAccountTag,
+        config.cloudflareSiteTag
+    )
 
     configureSerialization()
     configureStatusPages()
@@ -151,7 +158,7 @@ fun Application.module(config: AppConfig) {
         rateLimit(API_RATE_LIMIT) {
             userRoutes(userRepository, quoteRepository, notificationRepository)
             quoteRoutes(quoteRepository, userRepository, appSettingsRepository, notificationRepository, commentRepository)
-            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository, commentRepository, analyticsRepository, categoryRepository, sourceTypeRepository)
+            adminRoutes(userRepository, quoteRepository, appSettingsRepository, notificationRepository, reportRepository, commentRepository, analyticsRepository, categoryRepository, sourceTypeRepository, cloudflareAnalyticsClient)
             categoryRoutes(categoryRepository)
             sourceTypeRoutes(sourceTypeRepository)
             maintenanceRoutes(appSettingsRepository)

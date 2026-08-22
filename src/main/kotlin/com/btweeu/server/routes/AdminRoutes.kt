@@ -1,5 +1,6 @@
 package com.btweeu.server.routes
 
+import com.btweeu.server.analytics.CloudflareAnalyticsClient
 import com.btweeu.server.data.repository.AnalyticsRepository
 import com.btweeu.server.data.repository.AppSettingsRepository
 import com.btweeu.server.data.repository.CategoryRepository
@@ -80,7 +81,8 @@ fun Route.adminRoutes(
     commentRepository: CommentRepository,
     analyticsRepository: AnalyticsRepository,
     categoryRepository: CategoryRepository,
-    sourceTypeRepository: SourceTypeRepository
+    sourceTypeRepository: SourceTypeRepository,
+    cloudflareAnalyticsClient: CloudflareAnalyticsClient
 ) {
     route("/admin") {
         authenticate(AUTH_JWT) {
@@ -101,6 +103,20 @@ fun Route.adminRoutes(
                         rejectedQuotes = quoteRepository.countByStatus("REJECTED")
                     )
                 )
+            }
+
+            get("/visitor-stats") {
+                call.requireSuperAdmin(userRepository)
+                if (!cloudflareAnalyticsClient.isEnabled) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Cloudflare Web Analytics is not configured"))
+                    return@get
+                }
+                val days = call.request.queryParameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 30
+                try {
+                    call.respond(cloudflareAnalyticsClient.getVisitorStats(days)!!)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadGateway, mapOf("error" to (e.message ?: "Failed to fetch visitor stats")))
+                }
             }
 
             get("/users") {
