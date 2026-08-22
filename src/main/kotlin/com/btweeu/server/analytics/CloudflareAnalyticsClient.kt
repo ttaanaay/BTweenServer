@@ -132,13 +132,23 @@ class CloudflareAnalyticsClient(
         )
     }
 
+    /** Escapes a string for safe embedding inside a JSON string literal - just the query
+     * text here, which only ever contains backslashes, quotes, and newlines from the
+     * multi-line GraphQL literal above, not arbitrary untrusted input. */
+    private fun escapeJsonString(s: String): String = s
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "")
+        .replace("\t", "\\t")
+
     private fun buildJsonRequest(query: String, since: String, until: String): String {
         // Built directly rather than through kotlinx.serialization data classes, since the
         // variables shape (siteTag inside an AND array alongside datetime bounds) is fiddly
         // to model and this is the only place it's needed.
         return """
             {
-              "query": ${json.encodeToString(query)},
+              "query": "${escapeJsonString(query)}",
               "variables": {
                 "accountTag": "$accountTag",
                 "filter": {

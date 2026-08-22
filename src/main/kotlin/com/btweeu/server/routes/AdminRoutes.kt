@@ -108,15 +108,10 @@ fun Route.adminRoutes(
             get("/visitor-stats") {
                 call.requireSuperAdmin(userRepository)
                 if (!cloudflareAnalyticsClient.isEnabled) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Cloudflare Web Analytics is not configured"))
-                    return@get
+                    throw NotFoundException("Cloudflare Web Analytics is not configured")
                 }
                 val days = call.request.queryParameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 30
-                try {
-                    call.respond(cloudflareAnalyticsClient.getVisitorStats(days)!!)
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadGateway, mapOf("error" to (e.message ?: "Failed to fetch visitor stats")))
-                }
+                call.respond(cloudflareAnalyticsClient.getVisitorStats(days)!!)
             }
 
             get("/users") {
